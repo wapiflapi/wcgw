@@ -210,17 +210,17 @@ export function DesignPanel({
           </FieldSet>
 
           <FieldSet>
-            <FieldLegend>Track</FieldLegend>
+            <FieldLegend>Ramp</FieldLegend>
             <SliderField
-              id="trackAngle_deg"
-              label="Track angle"
+              id="rampAngle_deg"
+              label="Ramp angle"
               unit="deg"
-              value={radToDeg(modelInput.trackAngle_rad.nominal)}
+              value={radToDeg(modelInput.rampAngle_rad.nominal)}
               min={0}
               max={60}
               step={1}
               onChange={(angle_deg) => {
-                updateNominal("trackAngle_rad", degToRad(angle_deg))
+                updateNominal("rampAngle_rad", degToRad(angle_deg))
               }}
             />
           </FieldSet>
@@ -301,14 +301,14 @@ export function DesignPanel({
                 }}
               />
               <NumberField
-                id="trackEnergyEfficiency_ratio"
-                label="Track efficiency"
+                id="rampEnergyEfficiency_ratio"
+                label="Ramp efficiency"
                 value={formatNumber(
-                  modelInput.trackEnergyEfficiency_ratio.nominal,
+                  modelInput.rampEnergyEfficiency_ratio.nominal,
                   2
                 )}
                 onChange={(efficiency) => {
-                  updateNominal("trackEnergyEfficiency_ratio", efficiency)
+                  updateNominal("rampEnergyEfficiency_ratio", efficiency)
                 }}
               />
               <NumberField

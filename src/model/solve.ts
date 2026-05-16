@@ -25,8 +25,8 @@ export function solveBlueprint(input: ModelInput): Blueprint {
       input.targetNormalImpactSpeed_mps
     ),
 
-    trackAngle_rad: blueprintValue(input.trackAngle_rad),
-    trackLength_m: blueprintValue(input.trackLength_m),
+    rampAngle_rad: blueprintValue(input.rampAngle_rad),
+    rampLength_m: blueprintValue(input.rampLength_m),
     releasePoint_x_m: blueprintValue(input.releasePoint_x_m),
     releasePoint_y_m: blueprintValue(input.releasePoint_y_m),
     impactPoint_x_m: blueprintValue(input.impactPoint_x_m),
@@ -44,8 +44,8 @@ export function solveBlueprint(input: ModelInput): Blueprint {
     staticFrictionCoefficient_ratio: blueprintValue(
       input.staticFrictionCoefficient_ratio
     ),
-    trackEnergyEfficiency_ratio: blueprintValue(
-      input.trackEnergyEfficiency_ratio
+    rampEnergyEfficiency_ratio: blueprintValue(
+      input.rampEnergyEfficiency_ratio
     ),
     impactRestitutionCoefficient_ratio: blueprintValue(
       input.impactRestitutionCoefficient_ratio

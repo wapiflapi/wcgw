@@ -1,9 +1,5 @@
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { BlueprintPanel } from "@/components/blueprint-panel"
 import type { Blueprint, ObservationAggregate } from "@/model/model"
 
 type ObservationsPanelProps = {
@@ -33,7 +29,7 @@ export function ObservationsPanel({
       </TabsList>
 
       <TabsContent value="blueprint">
-        {blueprint === null ? "Blueprint pending" : "Blueprint ready"}
+        <BlueprintPanel blueprint={blueprint} />
       </TabsContent>
       <TabsContent value="observations">
         {observations === null

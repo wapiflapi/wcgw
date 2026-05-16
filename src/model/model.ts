@@ -17,8 +17,8 @@ export type ModelInput = {
   targetReleaseToImpactTime_s: InputValue
   targetNormalImpactSpeed_mps: InputValue
 
-  trackAngle_rad: InputValue
-  trackLength_m: InputValue
+  rampAngle_rad: InputValue
+  rampLength_m: InputValue
   releasePoint_x_m: InputValue
   releasePoint_y_m: InputValue
   impactPoint_x_m: InputValue
@@ -32,7 +32,7 @@ export type ModelInput = {
   marbleDensity_kgpm3: InputValue
   rollingInertiaFactor_ratio: InputValue
   staticFrictionCoefficient_ratio: InputValue
-  trackEnergyEfficiency_ratio: InputValue
+  rampEnergyEfficiency_ratio: InputValue
   impactRestitutionCoefficient_ratio: InputValue
   impactFrictionCoefficient_ratio: InputValue
   spinTransferEfficiency_ratio: InputValue
@@ -46,8 +46,8 @@ export type Blueprint = {
   targetReleaseToImpactTime_s: BlueprintValue
   targetNormalImpactSpeed_mps: BlueprintValue
 
-  trackAngle_rad: BlueprintValue
-  trackLength_m: BlueprintValue
+  rampAngle_rad: BlueprintValue
+  rampLength_m: BlueprintValue
   releasePoint_x_m: BlueprintValue
   releasePoint_y_m: BlueprintValue
   impactPoint_x_m: BlueprintValue
@@ -61,7 +61,7 @@ export type Blueprint = {
   marbleDensity_kgpm3: BlueprintValue
   rollingInertiaFactor_ratio: BlueprintValue
   staticFrictionCoefficient_ratio: BlueprintValue
-  trackEnergyEfficiency_ratio: BlueprintValue
+  rampEnergyEfficiency_ratio: BlueprintValue
   impactRestitutionCoefficient_ratio: BlueprintValue
   impactFrictionCoefficient_ratio: BlueprintValue
   spinTransferEfficiency_ratio: BlueprintValue
