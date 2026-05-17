@@ -136,8 +136,9 @@ function SnapshotHeader({
       scope="col"
     >
       {label}
-      <span className="opacity-0"> </span>
-      <span className="absolute inset-x-0 bottom-1 text-right">{unit}</span>
+      <span className="absolute inset-x-0 bottom-1 text-right">
+        &nbsp;{unit}
+      </span>
     </th>
   )
 }
