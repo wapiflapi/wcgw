@@ -40,6 +40,12 @@ export function App() {
           />
           <SchematicPanel
             blueprint={blueprint}
+            featuredObservations={[
+              observations?.earliestTimingObservation ?? null,
+              observations?.latestTimingObservation ?? null,
+              observations?.quietestImpactObservation ?? null,
+              observations?.loudestImpactObservation ?? null,
+            ].filter((observation) => observation !== null)}
             nominalObservation={observations?.nominalObservation ?? null}
             nominalObservationStale={observationsStale}
             sampledObservations={observations?.samples ?? []}

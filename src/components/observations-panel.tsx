@@ -514,7 +514,9 @@ export function ObservationsPanel({
               value="observations"
             >
               Observations
-              {hasProblems ? <Warning className="size-4" /> : null}
+              {hasProblems ? (
+                <Warning className="size-4 text-destructive" />
+              ) : null}
             </TabsTrigger>
           </TabsList>
           <Button

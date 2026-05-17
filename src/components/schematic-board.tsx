@@ -53,6 +53,7 @@ type MarblePathCurve = JXG.GeometryElement & {
 
 type SchematicBoardProps = {
   blueprint: Blueprint | null
+  featuredObservations: Observation[]
   nominalObservation: Observation | null
   nominalObservationStale: boolean
   sampledObservations: Observation[]
@@ -64,11 +65,46 @@ const MIN_VIEW_SIZE_m = 0.5
 const VIEW_MARGIN_RATIO = 0.25
 const MIN_TRAJECTORY_TIME_s = 0.001
 const TRAJECTORY_POINT_COUNT = 48
+const ACCEPTABLE_TIMING_DEVIATION_s = 0.001
+const ACCEPTABLE_IMPACT_SPEED_DEVIATION_mps = 0.01
 
 function getThemeColor(name: string) {
   return getComputedStyle(document.documentElement)
     .getPropertyValue(name)
     .trim()
+}
+
+function isNullableBooleanCheckOk(value: boolean | null) {
+  return value === true
+}
+
+function isNullableDeviationOk(
+  deviation: number | null,
+  acceptableAbsoluteDeviation: number
+) {
+  return (
+    deviation !== null && Math.abs(deviation) <= acceptableAbsoluteDeviation
+  )
+}
+
+function isObservationOk(observation: Observation) {
+  const checks = observation.checks
+
+  return (
+    observation.valid &&
+    isNullableBooleanCheckOk(checks.rampReliableAccelerationOk) &&
+    isNullableBooleanCheckOk(checks.rampStaticFrictionOk) &&
+    isNullableBooleanCheckOk(checks.ballisticsImpactFound) &&
+    isNullableBooleanCheckOk(checks.contactMovingIntoDrumOk) &&
+    isNullableDeviationOk(
+      checks.targetReleaseToImpactTimeDeviation_s,
+      ACCEPTABLE_TIMING_DEVIATION_s
+    ) &&
+    isNullableDeviationOk(
+      checks.targetNormalImpactSpeedDeviation_mps,
+      ACCEPTABLE_IMPACT_SPEED_DEVIATION_mps
+    )
+  )
 }
 
 function initBoard(
@@ -359,6 +395,25 @@ function getProjectilePathPoints(
   }
 }
 
+function isSnapshotDrawable(snapshot: Snapshot) {
+  return (
+    Number.isFinite(snapshot.marblePosition_x_m) &&
+    Number.isFinite(snapshot.marblePosition_y_m) &&
+    Number.isFinite(snapshot.marbleSpeed_x_mps) &&
+    Number.isFinite(snapshot.marbleSpeed_y_mps) &&
+    Number.isFinite(snapshot.time_s)
+  )
+}
+
+function isObservationDrawable(observation: Observation) {
+  return (
+    Number.isFinite(observation.blueprintRealization.gravity_mps2) &&
+    isSnapshotDrawable(observation.dropSnapshot) &&
+    isSnapshotDrawable(observation.impactSnapshot) &&
+    isSnapshotDrawable(observation.bounceSnapshot)
+  )
+}
+
 function createMarblePathCurve(
   board: JXG.Board,
   style: MarblePathStyle
@@ -464,7 +519,7 @@ function updateMarblePathElements(
   observation: Observation,
   style: MarblePathStyle
 ) {
-  if (!observation.valid) {
+  if (!isObservationDrawable(observation)) {
     hideMarblePathElements(elements)
     return
   }
@@ -572,6 +627,7 @@ function updateSchematicElements(
 
 export function SchematicBoard({
   blueprint,
+  featuredObservations,
   nominalObservation,
   nominalObservationStale,
   sampledObservations,
@@ -587,6 +643,7 @@ export function SchematicBoard({
   const marblePathsRef = useRef<MarblePathElements[]>([])
   const colorsRef = useRef<{
     background: string
+    destructive: string
     mutedForeground: string
     primary: string
   } | null>(null)
@@ -596,6 +653,7 @@ export function SchematicBoard({
     let freeBoard: ((board: JXG.Board) => void) | null = null
     const background = getThemeColor("--background")
     const border = getThemeColor("--border")
+    const destructive = getThemeColor("--destructive")
     const mutedForeground = getThemeColor("--muted-foreground")
     const primary = getThemeColor("--primary")
 
@@ -651,6 +709,7 @@ export function SchematicBoard({
       boardRef.current = board
       colorsRef.current = {
         background,
+        destructive,
         mutedForeground,
         primary,
       }
@@ -724,37 +783,57 @@ export function SchematicBoard({
 
     updateSchematicElements(board, elementsRef.current, geometry)
 
+    const uniqueFeaturedObservations = featuredObservations.filter(
+      (observation, index) => featuredObservations.indexOf(observation) === index
+    )
+    const featuredObservationSet = new Set(uniqueFeaturedObservations)
+    const nonNominalFeaturedObservations = uniqueFeaturedObservations.filter(
+      (observation) => observation !== nominalObservation
+    )
+    const sampleStyle = {
+      strokeColor: colors.primary,
+      strokeOpacity: nominalObservationStale ? 0.03 : 0.08,
+      strokeWidth: 2,
+    }
+    const nominalStyle = {
+      strokeColor: colors.primary,
+      strokeOpacity: 1,
+      strokeWidth: 2,
+    }
+    const getFeaturedStyle = (observation: Observation): MarblePathStyle => ({
+      strokeColor: isObservationOk(observation)
+        ? colors.primary
+        : colors.destructive,
+      strokeOpacity: sampleStyle.strokeOpacity,
+      strokeWidth: 2,
+    })
     const marblePathSpecs: Array<{
       observation: Observation
       style: MarblePathStyle
-    }> =
-      nominalObservation === null
-        ? sampledObservations.map((observation) => ({
-            observation,
-            style: {
-              strokeColor: colors.primary,
-              strokeOpacity: nominalObservationStale ? 0.03 : 0.08,
-              strokeWidth: 2,
-            },
-          }))
+    }> = [
+      ...sampledObservations
+        .filter(
+          (observation) =>
+            observation !== nominalObservation &&
+            !featuredObservationSet.has(observation)
+        )
+        .map((observation) => ({
+          observation,
+          style: sampleStyle,
+        })),
+      ...nonNominalFeaturedObservations.map((observation) => ({
+        observation,
+        style: getFeaturedStyle(observation),
+      })),
+      ...(nominalObservation === null
+        ? []
         : [
             {
               observation: nominalObservation,
-              style: {
-                strokeColor: colors.primary,
-                strokeOpacity: nominalObservationStale ? 0.25 : 1,
-                strokeWidth: 2,
-              },
+              style: nominalStyle,
             },
-            ...sampledObservations.map((observation) => ({
-              observation,
-              style: {
-                strokeColor: colors.primary,
-                strokeOpacity: nominalObservationStale ? 0.03 : 0.08,
-                strokeWidth: 2,
-              },
-            })),
-          ]
+          ]),
+    ]
 
     marblePathsRef.current = updateMarblePaths(
       board,
@@ -766,6 +845,7 @@ export function SchematicBoard({
     board.unsuspendUpdate()
   }, [
     blueprint,
+    featuredObservations,
     nominalObservation,
     nominalObservationStale,
     sampledObservations,
