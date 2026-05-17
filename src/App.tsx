@@ -26,7 +26,7 @@ export function App() {
 
   return (
     <>
-      <main className="grid min-h-svh grid-cols-1 sm:grid-cols-[minmax(0,23rem)_minmax(0,1fr)] sm:grid-rows-[minmax(0,1fr)_minmax(0,1fr)] lg:grid-cols-[minmax(0,23rem)_minmax(0,1fr)_minmax(0,23rem)] lg:grid-rows-1 xl:grid-cols-[minmax(0,26rem)_minmax(0,1fr)_minmax(0,26rem)]">
+      <main className="grid min-h-svh grid-cols-1 sm:grid-cols-[minmax(0,23rem)_minmax(0,1fr)] sm:grid-rows-[minmax(0,1fr)_minmax(0,1fr)] lg:grid-cols-[minmax(0,23rem)_minmax(0,1fr)_minmax(0,26rem)] lg:grid-rows-1 xl:grid-cols-[minmax(0,26rem)_minmax(0,1fr)_minmax(0,26rem)]">
         <section className="p-4 sm:row-span-2 lg:row-span-1">
           <DesignPanel
             modelInput={modelInput}

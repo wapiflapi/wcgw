@@ -28,14 +28,23 @@ export type ModelInput = {
   gravity_mps2: number
   marbleDensity_kgpm3: number
   rollingInertiaFactor_ratio: number
+  rollingInertiaFactorTolerance_ratio: number
   staticFrictionCoefficient_ratio: number
+  staticFrictionCoefficientTolerance_ratio: number
   kineticFrictionCoefficient_ratio: number
+  kineticFrictionCoefficientTolerance_ratio: number
   minimumReliableRampAcceleration_mps2: number
+  minimumReliableRampAccelerationTolerance_mps2: number
   rampEnergyEfficiency_ratio: number
+  rampEnergyEfficiencyTolerance_ratio: number
   impactRestitutionCoefficient_ratio: number
+  impactRestitutionCoefficientTolerance_ratio: number
   impactFrictionCoefficient_ratio: number
+  impactFrictionCoefficientTolerance_ratio: number
   spinTransferEfficiency_ratio: number
+  spinTransferEfficiencyTolerance_ratio: number
   drumComplianceFactor_ratio: number
+  drumComplianceFactorTolerance_ratio: number
 }
 
 export type Blueprint = {

@@ -310,53 +310,42 @@ function remainingBlueprintEntries(blueprint: Blueprint): BlueprintItem[] {
 
 function BlueprintRows({ items }: { items: BlueprintItem[] }) {
   return (
-    <dl className="grid gap-2">
-      {items.map((item) => (
-        <div
-          className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-1"
-          key={item.label}
-        >
-          <dt className="text-muted-foreground">{item.label}</dt>
-          <dd className="text-right tabular-nums">
-            {item.value.map((line) => (
-              <span
-                className="block"
-                key={`${line.prefix ?? ""}${line.nominal}${line.tolerance ?? ""}${line.segments?.length ?? ""}`}
-              >
-                {line.segments ? (
-                  line.segments.map((segment, index) => (
-                    <span
-                      key={`${segment.prefix ?? ""}${segment.nominal}${segment.tolerance ?? ""}`}
-                    >
-                      {index > 0 ? ", " : null}
-                      {segment.prefix ? `${segment.prefix} ` : null}
-                      {segment.nominal}
-                      {segment.tolerance ? (
-                        <span className="text-muted-foreground">
-                          {" "}
-                          {segment.tolerance}
-                        </span>
-                      ) : null}
-                    </span>
-                  ))
-                ) : (
-                  <>
-                    {line.prefix ? `${line.prefix} ` : null}
-                    {line.nominal}
-                    {line.tolerance ? (
+    <table className="w-full border-separate border-spacing-0">
+      <tbody>
+        {items.flatMap((item) =>
+          item.value.flatMap((line) => {
+            const lines = line.segments ?? [line]
+
+            return lines.map((segment) => {
+              const label = segment.prefix
+                ? `${item.label} ${segment.prefix}`
+                : item.label
+              const key = `${label}${segment.nominal}${segment.tolerance ?? ""}`
+
+              return (
+                <tr key={key}>
+                  <th
+                    className="py-1 pr-4 text-left font-normal text-muted-foreground"
+                    scope="row"
+                  >
+                    {label}
+                  </th>
+                  <td className="py-1 text-right tabular-nums">
+                    {segment.nominal}
+                    {segment.tolerance ? (
                       <span className="text-muted-foreground">
                         {" "}
-                        {line.tolerance}
+                        {segment.tolerance}
                       </span>
                     ) : null}
-                  </>
-                )}
-              </span>
-            ))}
-          </dd>
-        </div>
-      ))}
-    </dl>
+                  </td>
+                </tr>
+              )
+            })
+          })
+        )}
+      </tbody>
+    </table>
   )
 }
 
@@ -365,18 +354,24 @@ export function BlueprintPanel({ blueprint }: BlueprintPanelProps) {
     return <p className="text-muted-foreground">Blueprint pending</p>
   }
 
+  const remainingEntries = remainingBlueprintEntries(blueprint)
+
   return (
     <FieldGroup>
       <BlueprintRows items={blueprintEntries(blueprint)} />
       <Collapsible>
         <CollapsibleTrigger
-          render={<Button className="h-auto p-0" variant="link" />}
+          className="flex w-full items-center justify-between"
+          render={<Button className="px-0" type="button" variant="link" />}
         >
-          Other values
-          <CaretDown />
+          <span className="text-muted-foreground">Other values</span>
+          <span className="flex items-center gap-2">
+            <span className="tabular-nums">+{remainingEntries.length}</span>
+            <CaretDown className="size-4 text-muted-foreground" />
+          </span>
         </CollapsibleTrigger>
         <CollapsibleContent>
-          <BlueprintRows items={remainingBlueprintEntries(blueprint)} />
+          <BlueprintRows items={remainingEntries} />
         </CollapsibleContent>
       </Collapsible>
     </FieldGroup>

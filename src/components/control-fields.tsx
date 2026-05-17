@@ -12,7 +12,7 @@ import { formatNumber } from "@/lib/format"
 
 type NumberFieldProps = {
   id: string
-  label: string
+  label: React.ReactNode
   prefix?: string
   unit?: string
   value?: string
@@ -22,7 +22,7 @@ type NumberFieldProps = {
 
 type SliderFieldProps = {
   id: string
-  label: string
+  label: React.ReactNode
   unit: string
   value: number
   min: number
@@ -62,7 +62,9 @@ export function NumberField({
 
   return (
     <Field>
-      <FieldLabel htmlFor={id}>{label}</FieldLabel>
+      <FieldLabel className="w-full" htmlFor={id}>
+        {label}
+      </FieldLabel>
       <InputGroup>
         {prefix ? (
           <InputGroupAddon align="inline-start">
@@ -149,7 +151,9 @@ export function SliderField({
   return (
     <Field>
       <SliderHeader>
-        <FieldLabel htmlFor={id}>{label}</FieldLabel>
+        <FieldLabel className="w-full" htmlFor={id}>
+          {label}
+        </FieldLabel>
         <NumberField
           id={id}
           label=""

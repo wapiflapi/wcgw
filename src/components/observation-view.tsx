@@ -35,18 +35,6 @@ function formatBool(value: boolean | null) {
   return value ? "ok" : "failed"
 }
 
-function formatSnapshotPoint(snapshot: Snapshot) {
-  return `x ${formatNumber(mToMm(snapshot.marblePosition_x_m), 0)} mm, y ${formatNumber(mToMm(snapshot.marblePosition_y_m), 0)} mm`
-}
-
-function formatSnapshotSpeed(snapshot: Snapshot) {
-  return `x ${formatNumber(snapshot.marbleSpeed_x_mps, 3)} m/s, y ${formatNumber(snapshot.marbleSpeed_y_mps, 3)} m/s`
-}
-
-function formatTime_s(time_s: number) {
-  return `${formatNumber(sToMs(time_s), 1)} ms`
-}
-
 function formatNullableSpeed_mps(speed_mps: number | null) {
   return speed_mps === null
     ? "pending"
@@ -54,7 +42,9 @@ function formatNullableSpeed_mps(speed_mps: number | null) {
 }
 
 function formatNullableTime_s(time_s: number | null) {
-  return time_s === null ? "pending" : formatTime_s(time_s)
+  return time_s === null
+    ? "pending"
+    : `${formatNumber(sToMs(time_s), 1)} ms`
 }
 
 function boolTone(value: boolean | null): ObservationItem["tone"] {
@@ -94,59 +84,113 @@ function valueToneClass(tone: ObservationItem["tone"]) {
 
 function ObservationRows({ items }: { items: ObservationItem[] }) {
   return (
-    <dl className="grid gap-2">
-      {items.map((item) => (
-        <div
-          className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-1"
-          key={item.label}
-        >
-          <dt
-            className={cn(
-              "text-muted-foreground",
-              item.emphasis === "target" && "self-end"
-            )}
-          >
-            {item.label}
-          </dt>
-          <dd
-            className={cn(
-              "text-right tabular-nums",
-              valueToneClass(item.tone),
-              item.emphasis === "target" && "text-lg font-semibold"
-            )}
-          >
-            {item.value}
-          </dd>
-        </div>
-      ))}
-    </dl>
+    <table className="w-full border-separate border-spacing-0">
+      <tbody>
+        {items.map((item) => (
+          <tr key={item.label}>
+            <th
+              className={cn(
+                "py-1 pr-4 text-left font-normal text-muted-foreground",
+                item.emphasis === "target" && "align-bottom"
+              )}
+              scope="row"
+            >
+              {item.label}
+            </th>
+            <td
+              className={cn(
+                "py-1 text-right tabular-nums",
+                valueToneClass(item.tone),
+                item.emphasis === "target" && "text-lg font-semibold"
+              )}
+            >
+              {item.value}
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  )
+}
+
+function SnapshotHeader({
+  className,
+  label,
+  unit,
+}: {
+  className?: string
+  label: string
+  unit?: string
+}) {
+  if (!unit) {
+    return (
+      <th className={cn("pb-1 font-normal", className)} scope="col">
+        {label}
+      </th>
+    )
+  }
+
+  return (
+    <th
+      className={cn("relative h-10 pb-1 align-top font-normal", className)}
+      scope="col"
+    >
+      {label}
+      <span className="opacity-0"> </span>
+      <span className="absolute inset-x-0 bottom-1 text-right">{unit}</span>
+    </th>
   )
 }
 
 function SnapshotRows({ items }: { items: SnapshotItem[] }) {
   return (
-    <dl className="grid gap-2">
-      {items.map((item) => (
-        <div
-          className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-1"
-          key={item.label}
-        >
-          <dt>
-            {item.label}{" "}
-            <span className="text-muted-foreground tabular-nums">
-              ({formatTime_s(item.snapshot.time_s)})
-            </span>
-          </dt>
-          <dd className="text-right tabular-nums">
-            <span className="block">{formatSnapshotPoint(item.snapshot)}</span>
-            <span className="block text-muted-foreground">
-              {formatSnapshotSpeed(item.snapshot)}, spin{" "}
-              {formatNumber(item.snapshot.marbleSpin_radps, 1)} rad/s
-            </span>
-          </dd>
-        </div>
-      ))}
-    </dl>
+    <table className="w-full border-separate border-spacing-0">
+      <thead>
+        <tr className="text-muted-foreground">
+          <SnapshotHeader className="pr-4 text-left" label="Event" />
+          <SnapshotHeader className="text-right" label="Time" unit="ms" />
+          <SnapshotHeader className="pl-4 text-right" label="X" unit="mm" />
+          <SnapshotHeader className="pl-4 text-right" label="Y" unit="mm" />
+          <SnapshotHeader className="pl-4 text-right" label="Vx" unit="m/s" />
+          <SnapshotHeader className="pl-4 text-right" label="Vy" unit="m/s" />
+          <SnapshotHeader
+            className="pl-4 text-right"
+            label="Spin"
+            unit="rad/s"
+          />
+        </tr>
+      </thead>
+      <tbody>
+        {items.map((item) => (
+          <tr key={item.label}>
+            <th
+              className="py-1 pr-4 text-left font-normal text-muted-foreground"
+              scope="row"
+            >
+              {item.label}
+            </th>
+            <td className="py-1 text-right tabular-nums">
+              {formatNumber(sToMs(item.snapshot.time_s), 1)}
+            </td>
+            <td className="py-1 pl-4 text-right tabular-nums">
+              {formatNumber(mToMm(item.snapshot.marblePosition_x_m), 0)}
+            </td>
+            <td className="py-1 pl-4 text-right tabular-nums">
+              {formatNumber(mToMm(item.snapshot.marblePosition_y_m), 0)}
+            </td>
+            <td className="py-1 pl-4 text-right tabular-nums">
+              {formatNumber(item.snapshot.marbleSpeed_x_mps, 3)}
+            </td>
+            <td className="py-1 pl-4 text-right tabular-nums">
+              {formatNumber(item.snapshot.marbleSpeed_y_mps, 3)}
+            </td>
+            <td className="py-1 pl-4 text-right tabular-nums">
+              {formatNumber(item.snapshot.marbleSpin_radps, 1)}
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
   )
 }
 
@@ -168,7 +212,7 @@ export function ObservationView({
       <ObservationRows
         items={[
           {
-            label: "Status",
+            label: `Status of ${title}`,
             value: observation.valid ? "valid" : "invalid",
           },
           {

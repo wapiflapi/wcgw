@@ -29,6 +29,17 @@ function blueprintValue(nominal: number): BlueprintValue {
   }
 }
 
+function blueprintInputToleranceValue(
+  nominal: number,
+  tolerance: number
+): BlueprintValue {
+  return {
+    nominal,
+    toleranceMinus: Math.abs(tolerance),
+    tolerancePlus: Math.abs(tolerance),
+  }
+}
+
 function blueprintNegativeToleranceValue(
   nominal: number,
   tolerance: number
@@ -228,32 +239,41 @@ export function solveBlueprint(input: ModelInput): Blueprint {
 
     gravity_mps2: blueprintValue(input.gravity_mps2),
     marbleDensity_kgpm3: blueprintValue(input.marbleDensity_kgpm3),
-    rollingInertiaFactor_ratio: blueprintValue(
-      input.rollingInertiaFactor_ratio
+    rollingInertiaFactor_ratio: blueprintInputToleranceValue(
+      input.rollingInertiaFactor_ratio,
+      input.rollingInertiaFactorTolerance_ratio
     ),
-    staticFrictionCoefficient_ratio: blueprintValue(
-      input.staticFrictionCoefficient_ratio
+    staticFrictionCoefficient_ratio: blueprintInputToleranceValue(
+      input.staticFrictionCoefficient_ratio,
+      input.staticFrictionCoefficientTolerance_ratio
     ),
-    kineticFrictionCoefficient_ratio: blueprintValue(
-      input.kineticFrictionCoefficient_ratio
+    kineticFrictionCoefficient_ratio: blueprintInputToleranceValue(
+      input.kineticFrictionCoefficient_ratio,
+      input.kineticFrictionCoefficientTolerance_ratio
     ),
-    minimumReliableRampAcceleration_mps2: blueprintValue(
-      input.minimumReliableRampAcceleration_mps2
+    minimumReliableRampAcceleration_mps2: blueprintInputToleranceValue(
+      input.minimumReliableRampAcceleration_mps2,
+      input.minimumReliableRampAccelerationTolerance_mps2
     ),
-    rampEnergyEfficiency_ratio: blueprintValue(
-      input.rampEnergyEfficiency_ratio
+    rampEnergyEfficiency_ratio: blueprintInputToleranceValue(
+      input.rampEnergyEfficiency_ratio,
+      input.rampEnergyEfficiencyTolerance_ratio
     ),
-    impactRestitutionCoefficient_ratio: blueprintValue(
-      input.impactRestitutionCoefficient_ratio
+    impactRestitutionCoefficient_ratio: blueprintInputToleranceValue(
+      input.impactRestitutionCoefficient_ratio,
+      input.impactRestitutionCoefficientTolerance_ratio
     ),
-    impactFrictionCoefficient_ratio: blueprintValue(
-      input.impactFrictionCoefficient_ratio
+    impactFrictionCoefficient_ratio: blueprintInputToleranceValue(
+      input.impactFrictionCoefficient_ratio,
+      input.impactFrictionCoefficientTolerance_ratio
     ),
-    spinTransferEfficiency_ratio: blueprintValue(
-      input.spinTransferEfficiency_ratio
+    spinTransferEfficiency_ratio: blueprintInputToleranceValue(
+      input.spinTransferEfficiency_ratio,
+      input.spinTransferEfficiencyTolerance_ratio
     ),
-    drumComplianceFactor_ratio: blueprintValue(
-      input.drumComplianceFactor_ratio
+    drumComplianceFactor_ratio: blueprintInputToleranceValue(
+      input.drumComplianceFactor_ratio,
+      input.drumComplianceFactorTolerance_ratio
     ),
   }
 }

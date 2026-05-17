@@ -635,7 +635,7 @@ export function SchematicBoard({
           enabled: false,
         },
         resize: {
-          enabled: true,
+          enabled: false,
           throttle: 50,
         },
         showCopyright: false,

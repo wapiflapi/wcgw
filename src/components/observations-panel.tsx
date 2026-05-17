@@ -41,6 +41,7 @@ type NumericCheckItem = {
 }
 
 type ExtremeObservationItem = {
+  defaultOpen?: boolean
   observation: Observation | null
   title: string
   value: string
@@ -58,17 +59,16 @@ function formatPercent(value: number) {
   return `${formatNumber(value * 100, 1)}%`
 }
 
-function formatNumericCheckValue(
+function formatNumericCheckNumber(
   aggregate: NumericCheckAggregate,
   value: number,
-  unit: string,
   transform: (value: number) => number = (rawValue) => rawValue
 ) {
   if (aggregate.count === 0) {
     return "pending"
   }
 
-  return `${formatNumber(transform(value), 3)} ${unit}`
+  return formatNumber(transform(value), 3)
 }
 
 function hasObservationProblems(
@@ -80,7 +80,8 @@ function hasObservationProblems(
   }
 
   const checkAggregate = observations.checkAggregate
-  const timingDeviationAggregate = checkAggregate.targetReleaseToImpactTimeDeviation_s
+  const timingDeviationAggregate =
+    checkAggregate.targetReleaseToImpactTimeDeviation_s
   const timingOutsideTolerance =
     timingDeviationAggregate.count > 0 &&
     Math.max(
@@ -100,104 +101,146 @@ function hasObservationProblems(
 
 function TargetStatsRows({ items }: { items: NumericCheckItem[] }) {
   return (
-    <dl className="grid gap-2">
-      {items.map((item) => {
-        const standardDeviation = numericStandardDeviation(item.aggregate)
+    <table className="w-full border-separate border-spacing-0">
+      <thead>
+        <tr className="text-muted-foreground">
+          <th className="pb-1 pr-4 text-left font-normal" scope="col">
+            Metric
+          </th>
+          <th className="pb-1 text-right font-normal" scope="col">
+            Mean
+          </th>
+          <th className="pb-1 pl-4 text-right font-normal" scope="col">
+            SD
+          </th>
+          <th className="pb-1 pl-4 text-right font-normal" scope="col">
+            Min
+          </th>
+          <th className="pb-1 pl-4 text-right font-normal" scope="col">
+            Max
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        {items.map((item) => {
+          const standardDeviation = numericStandardDeviation(item.aggregate)
 
-        return (
-          <div
-            className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-1"
-            key={item.label}
-          >
-            <dt
-              className={cn(
-                "text-muted-foreground",
-                item.hasProblem && "text-destructive"
-              )}
-            >
-              {item.label}
-            </dt>
-            <dd
-              className={cn(
-                "text-right tabular-nums",
-                item.hasProblem && "text-destructive"
-              )}
-            >
-              <span className="block">
-                mean{" "}
-                {formatNumericCheckValue(
+          return (
+            <tr key={item.label}>
+              <th
+                className={cn(
+                  "py-1 pr-4 text-left align-top font-normal text-muted-foreground",
+                  item.hasProblem && "text-destructive"
+                )}
+                scope="row"
+              >
+                {item.label} {item.unit}
+              </th>
+              <td
+                className={cn(
+                  "py-1 text-right tabular-nums",
+                  item.hasProblem && "text-destructive"
+                )}
+              >
+                {formatNumericCheckNumber(
                   item.aggregate,
                   item.aggregate.meanAbsolute,
-                  item.unit,
                   item.transform
                 )}
-              </span>
-              <span className="block text-muted-foreground">
-                sd{" "}
-                {formatNumericCheckValue(
+              </td>
+              <td
+                className={cn(
+                  "py-1 pl-4 text-right tabular-nums",
+                  item.hasProblem && "text-destructive"
+                )}
+              >
+                {formatNumericCheckNumber(
                   item.aggregate,
                   standardDeviation,
-                  item.unit,
                   item.transform
                 )}
-                , min{" "}
-                {formatNumericCheckValue(
+              </td>
+              <td
+                className={cn(
+                  "py-1 pl-4 text-right tabular-nums",
+                  item.hasProblem && "text-destructive"
+                )}
+              >
+                {formatNumericCheckNumber(
                   item.aggregate,
                   item.aggregate.min,
-                  item.unit,
                   item.transform
                 )}
-                , max{" "}
-                {formatNumericCheckValue(
+              </td>
+              <td
+                className={cn(
+                  "py-1 pl-4 text-right tabular-nums",
+                  item.hasProblem && "text-destructive"
+                )}
+              >
+                {formatNumericCheckNumber(
                   item.aggregate,
                   item.aggregate.max,
-                  item.unit,
                   item.transform
                 )}
-                , n {item.aggregate.count}
-              </span>
-            </dd>
-          </div>
-        )
-      })}
-    </dl>
+              </td>
+            </tr>
+          )
+        })}
+      </tbody>
+    </table>
   )
 }
 
 function CheckFailureRows({ items }: { items: BooleanCheckItem[] }) {
   return (
-    <dl className="grid gap-2">
-      {items.map((item) => {
-        const failureRate =
-          item.aggregate.checkedCount === 0
-            ? null
-            : item.aggregate.failedCount / item.aggregate.checkedCount
+    <table className="w-full border-separate border-spacing-0">
+      <thead>
+        <tr className="text-muted-foreground">
+          <th className="pb-1 pr-4 text-left font-normal" scope="col">
+            Check
+          </th>
+          <th className="pb-1 text-right font-normal" scope="col">
+            Failure rate
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        {items.map((item) => {
+          const failureRate =
+            item.aggregate.checkedCount === 0
+              ? null
+              : item.aggregate.failedCount / item.aggregate.checkedCount
 
-        return (
-          <div
-            className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-4"
-            key={item.label}
-          >
-            <dt className="text-muted-foreground">{item.label}</dt>
-            <dd
-              className={cn(
-                "text-right tabular-nums",
-                item.aggregate.failedCount > 0
-                  ? "text-destructive"
-                  : "text-emerald-600 dark:text-emerald-400"
-              )}
-            >
-              {failureRate === null ? "pending" : formatPercent(failureRate)}
-            </dd>
-          </div>
-        )
-      })}
-    </dl>
+          return (
+            <tr key={item.label}>
+              <th
+                className="py-1 pr-4 text-left font-normal text-muted-foreground"
+                scope="row"
+              >
+                {item.label}
+              </th>
+              <td
+                className={cn(
+                  "py-1 text-right tabular-nums",
+                  item.aggregate.failedCount > 0
+                    ? "text-destructive"
+                    : "text-emerald-600 dark:text-emerald-400"
+                )}
+              >
+                {failureRate === null ? "pending" : formatPercent(failureRate)}
+              </td>
+            </tr>
+          )
+        })}
+      </tbody>
+    </table>
   )
 }
 
 function formatObservationTimingDelta(observation: Observation | null) {
-  const deviation_s = observation?.checks.targetReleaseToImpactTimeDeviation_s ?? null
+  const deviation_s =
+    observation?.checks.targetReleaseToImpactTimeDeviation_s ?? null
 
   return deviation_s === null
     ? "pending"
@@ -213,7 +256,7 @@ function formatObservationImpactSpeedDelta(observation: Observation | null) {
     : `${formatNumber(deviation_mps, 4)} m/s`
 }
 
-function ExtremeObservationList({
+function ObservationCollapsibleList({
   items,
 }: {
   items: ExtremeObservationItem[]
@@ -221,15 +264,15 @@ function ExtremeObservationList({
   return (
     <FieldGroup>
       {items.map((item) => (
-        <Collapsible key={item.title}>
+        <Collapsible defaultOpen={item.defaultOpen} key={item.title}>
           <CollapsibleTrigger
             className="flex w-full items-center justify-between"
             render={<Button className="px-0" type="button" variant="link" />}
           >
-            <span>{item.title}</span>
-            <span className="flex items-center gap-2 text-muted-foreground">
+            <span className="text-muted-foreground">{item.title}</span>
+            <span className="flex items-center gap-2">
               <span className="tabular-nums">{item.value}</span>
-              <CaretDown className="size-4" />
+              <CaretDown className="size-4 text-muted-foreground" />
             </span>
           </CollapsibleTrigger>
           <CollapsibleContent>
@@ -245,6 +288,34 @@ function ExtremeObservationList({
   )
 }
 
+function formatObservationStatus(observation: Observation | null) {
+  if (observation === null) {
+    return "pending"
+  }
+
+  return observation.valid ? "valid" : "invalid"
+}
+
+function SimulationOverview({ observations }: { observations: ObservationAggregate }) {
+  const completed = observations.completedRuns >= observations.requestedRuns
+
+  return (
+    <p className="text-muted-foreground">
+      Based on{" "}
+      <span className="tabular-nums">
+        {completed
+          ? formatNumber(observations.completedRuns, 0)
+          : `${formatNumber(observations.completedRuns, 0)} of ${formatNumber(observations.requestedRuns, 0)}`}
+      </span>{" "}
+      simulated build variations;{" "}
+      <span className="tabular-nums">
+        {formatNumber(observations.samples.length, 0)}
+      </span>{" "}
+      representative examples retained.
+    </p>
+  )
+}
+
 function ObservationAggregateView({
   observations,
   timingTolerance_s,
@@ -257,11 +328,8 @@ function ObservationAggregateView({
   }
 
   const checkAggregate = observations.checkAggregate
-  const invalidRate =
-    checkAggregate.observationCount === 0
-      ? 0
-      : checkAggregate.invalidCount / checkAggregate.observationCount
-  const timingDeviationAggregate = checkAggregate.targetReleaseToImpactTimeDeviation_s
+  const timingDeviationAggregate =
+    checkAggregate.targetReleaseToImpactTimeDeviation_s
   const timingOutsideTolerance =
     timingDeviationAggregate.count > 0 &&
     Math.max(
@@ -275,14 +343,14 @@ function ObservationAggregateView({
         <TargetStatsRows
           items={[
             {
-              label: "Timing deviation",
+              label: "Timing",
               aggregate: checkAggregate.targetReleaseToImpactTimeDeviation_s,
               unit: "ms",
               hasProblem: timingOutsideTolerance,
               transform: sToMs,
             },
             {
-              label: "Impact speed deviation",
+              label: "Punch",
               aggregate: checkAggregate.targetNormalImpactSpeedDeviation_mps,
               unit: "m/s",
             },
@@ -320,16 +388,7 @@ function ObservationAggregateView({
         />
       </FieldSet>
 
-      <p className="text-muted-foreground">
-        {observations.completedRuns} / {observations.requestedRuns} runs,{" "}
-        {observations.samples.length} samples, {formatPercent(invalidRate)}{" "}
-        invalid
-        {timingOutsideTolerance
-          ? `, timing deviation above ${formatNumber(sToMs(Math.abs(timingTolerance_s)), 3)} ms`
-          : ""}
-      </p>
-
-      <ExtremeObservationList
+      <ObservationCollapsibleList
         items={[
           {
             title: "Earliest timing",
@@ -361,6 +420,8 @@ function ObservationAggregateView({
           },
         ]}
       />
+
+      <SimulationOverview observations={observations} />
     </FieldGroup>
   )
 }
@@ -396,9 +457,17 @@ export function ObservationsPanel({
       <TabsContent value="blueprint">
         <FieldGroup>
           <BlueprintPanel blueprint={blueprint} />
-          <ObservationView
-            observation={observations?.nominalObservation ?? null}
-            title="Nominal observation"
+          <ObservationCollapsibleList
+            items={[
+              {
+                defaultOpen: true,
+                observation: observations?.nominalObservation ?? null,
+                title: "Nominal observation",
+                value: formatObservationStatus(
+                  observations?.nominalObservation ?? null
+                ),
+              },
+            ]}
           />
         </FieldGroup>
       </TabsContent>
