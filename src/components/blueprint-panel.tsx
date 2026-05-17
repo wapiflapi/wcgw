@@ -13,6 +13,7 @@ import { mToMm, radToDeg, sToMs } from "@/model/units"
 
 type BlueprintPanelProps = {
   blueprint: Blueprint | null
+  expandOtherValues?: boolean
 }
 
 type BlueprintItem = {
@@ -335,7 +336,6 @@ function BlueprintRows({ items }: { items: BlueprintItem[] }) {
             <td className="py-1 text-right tabular-nums">
               {item.value.map((line) => (
                 <span
-                  className="block"
                   key={`${line.prefix ?? ""}${line.nominal}${line.tolerance ?? ""}${line.segments?.length ?? ""}`}
                 >
                   {line.segments
@@ -358,7 +358,10 @@ function BlueprintRows({ items }: { items: BlueprintItem[] }) {
   )
 }
 
-export function BlueprintPanel({ blueprint }: BlueprintPanelProps) {
+export function BlueprintPanel({
+  blueprint,
+  expandOtherValues = false,
+}: BlueprintPanelProps) {
   if (blueprint === null) {
     return <p className="text-muted-foreground">Blueprint pending</p>
   }
@@ -368,7 +371,7 @@ export function BlueprintPanel({ blueprint }: BlueprintPanelProps) {
   return (
     <FieldGroup>
       <BlueprintRows items={blueprintEntries(blueprint)} />
-      <Collapsible>
+      <Collapsible defaultOpen={expandOtherValues}>
         <CollapsibleTrigger
           className="flex w-full items-center justify-between"
           render={<Button className="px-0" type="button" variant="link" />}

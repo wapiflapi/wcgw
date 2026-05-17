@@ -1,4 +1,7 @@
-import { CaretDown, Warning } from "@phosphor-icons/react"
+import { useRef } from "react"
+
+import { CaretDown, Copy, Warning } from "@phosphor-icons/react"
+import { toast } from "sonner"
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { BlueprintPanel } from "@/components/blueprint-panel"
@@ -45,6 +48,12 @@ type ExtremeObservationItem = {
   observation: Observation | null
   title: string
   value: string
+}
+
+type ObservationCollapsibleListProps = {
+  exportSpacing?: boolean
+  forceOpen?: boolean
+  items: ExtremeObservationItem[]
 }
 
 function numericStandardDeviation(aggregate: NumericCheckAggregate) {
@@ -257,14 +266,18 @@ function formatObservationImpactSpeedDelta(observation: Observation | null) {
 }
 
 function ObservationCollapsibleList({
+  exportSpacing = false,
+  forceOpen = false,
   items,
-}: {
-  items: ExtremeObservationItem[]
-}) {
+}: ObservationCollapsibleListProps) {
   return (
     <FieldGroup>
       {items.map((item) => (
-        <Collapsible defaultOpen={item.defaultOpen} key={item.title}>
+        <Collapsible
+          defaultOpen={forceOpen || item.defaultOpen}
+          key={item.title}
+        >
+          {exportSpacing ? <div>{"\n"}</div> : null}
           <CollapsibleTrigger
             className="flex w-full items-center justify-between"
             render={<Button className="px-0" type="button" variant="link" />}
@@ -317,9 +330,11 @@ function SimulationOverview({ observations }: { observations: ObservationAggrega
 }
 
 function ObservationAggregateView({
+  expandObservationDetails = false,
   observations,
   timingTolerance_s,
 }: {
+  expandObservationDetails?: boolean
   observations: ObservationAggregate | null
   timingTolerance_s: number
 }) {
@@ -389,6 +404,7 @@ function ObservationAggregateView({
       </FieldSet>
 
       <ObservationCollapsibleList
+        forceOpen={expandObservationDetails}
         items={[
           {
             title: "Earliest timing",
@@ -426,41 +442,131 @@ function ObservationAggregateView({
   )
 }
 
+async function copyElementToClipboard(element: HTMLElement) {
+  const selection = window.getSelection()
+  const range = document.createRange()
+
+  selection?.removeAllRanges()
+  range.selectNodeContents(element)
+  selection?.addRange(range)
+
+  const copied = document.execCommand("copy")
+  selection?.removeAllRanges()
+
+  if (copied) {
+    return
+  }
+
+  const text = element.innerText.trim()
+
+  const textarea = document.createElement("textarea")
+  textarea.value = text
+  textarea.setAttribute("readonly", "")
+  textarea.style.position = "fixed"
+  textarea.style.left = "-10000px"
+  textarea.style.top = "0"
+  document.body.appendChild(textarea)
+  textarea.select()
+  document.execCommand("copy")
+  document.body.removeChild(textarea)
+}
+
 export function ObservationsPanel({
   blueprint,
   observations,
   timingTolerance_s,
 }: ObservationsPanelProps) {
   const hasProblems = hasObservationProblems(observations, timingTolerance_s)
+  const exportRef = useRef<HTMLDivElement>(null)
+
+  async function copyExport() {
+    const exportElement = exportRef.current
+
+    if (!exportElement?.innerText.trim()) {
+      toast.error("Nothing to export yet")
+      return
+    }
+
+    try {
+      await copyElementToClipboard(exportElement)
+      toast.success("Right panel copied")
+    } catch {
+      toast.error("Could not copy right panel")
+    }
+  }
 
   return (
-    <Tabs defaultValue="blueprint">
-      <TabsList className="w-full rounded-none border-b bg-background p-0">
-        <TabsTrigger
-          className="h-full rounded-none border-0 border-b-2 border-transparent bg-background data-active:border-primary data-active:shadow-none! dark:data-active:border-primary"
-          value="blueprint"
-        >
-          Blueprint
-        </TabsTrigger>
-        <TabsTrigger
-          className={cn(
-            "h-full rounded-none border-0 border-b-2 border-transparent bg-background data-active:border-primary data-active:shadow-none! dark:data-active:border-primary",
-            hasProblems && "text-destructive"
-          )}
-          value="observations"
-        >
-          Observations
-          {hasProblems ? <Warning className="size-4" /> : null}
-        </TabsTrigger>
-      </TabsList>
+    <>
+      <Tabs defaultValue="blueprint">
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center border-b">
+          <TabsList className="w-full rounded-none border-b-0 bg-background p-0">
+            <TabsTrigger
+              className="h-full rounded-none border-0 border-b-2 border-transparent bg-background data-active:border-primary data-active:shadow-none! dark:data-active:border-primary"
+              value="blueprint"
+            >
+              Blueprint
+            </TabsTrigger>
+            <TabsTrigger
+              className={cn(
+                "h-full rounded-none border-0 border-b-2 border-transparent bg-background data-active:border-primary data-active:shadow-none! dark:data-active:border-primary",
+                hasProblems && "text-destructive"
+              )}
+              value="observations"
+            >
+              Observations
+              {hasProblems ? <Warning className="size-4" /> : null}
+            </TabsTrigger>
+          </TabsList>
+          <Button
+            className="ml-2"
+            size="icon-sm"
+            title="Copy right panel"
+            type="button"
+            variant="ghost"
+            onClick={copyExport}
+          >
+            <Copy />
+          </Button>
+        </div>
 
-      <TabsContent value="blueprint">
+        <TabsContent value="blueprint">
+          <FieldGroup>
+            <BlueprintPanel blueprint={blueprint} />
+            <ObservationCollapsibleList
+              items={[
+                {
+                  defaultOpen: true,
+                  observation: observations?.nominalObservation ?? null,
+                  title: "Nominal observation",
+                  value: formatObservationStatus(
+                    observations?.nominalObservation ?? null
+                  ),
+                },
+              ]}
+            />
+          </FieldGroup>
+        </TabsContent>
+        <TabsContent value="observations">
+          <ObservationAggregateView
+            observations={observations}
+            timingTolerance_s={timingTolerance_s}
+          />
+        </TabsContent>
+      </Tabs>
+
+      <div
+        aria-hidden="true"
+        className="pointer-events-none fixed top-0 -left-[10000px] w-[26rem]"
+        ref={exportRef}
+      >
+        <h2>Blueprint</h2>
         <FieldGroup>
-          <BlueprintPanel blueprint={blueprint} />
+          <BlueprintPanel blueprint={blueprint} expandOtherValues />
           <ObservationCollapsibleList
+            exportSpacing
+            forceOpen
             items={[
               {
-                defaultOpen: true,
                 observation: observations?.nominalObservation ?? null,
                 title: "Nominal observation",
                 value: formatObservationStatus(
@@ -470,13 +576,13 @@ export function ObservationsPanel({
             ]}
           />
         </FieldGroup>
-      </TabsContent>
-      <TabsContent value="observations">
+        <h2>Observations</h2>
         <ObservationAggregateView
+          expandObservationDetails
           observations={observations}
           timingTolerance_s={timingTolerance_s}
         />
-      </TabsContent>
-    </Tabs>
+      </div>
+    </>
   )
 }
