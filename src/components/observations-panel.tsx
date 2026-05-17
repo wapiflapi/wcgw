@@ -1,5 +1,7 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { BlueprintPanel } from "@/components/blueprint-panel"
+import { ObservationView } from "@/components/observation-view"
+import { FieldGroup } from "@/components/ui/field"
 import type { Blueprint, ObservationAggregate } from "@/model/model"
 
 type ObservationsPanelProps = {
@@ -29,7 +31,13 @@ export function ObservationsPanel({
       </TabsList>
 
       <TabsContent value="blueprint">
-        <BlueprintPanel blueprint={blueprint} />
+        <FieldGroup>
+          <BlueprintPanel blueprint={blueprint} />
+          <ObservationView
+            observation={observations?.nominalObservation ?? null}
+            title="Nominal observation"
+          />
+        </FieldGroup>
       </TabsContent>
       <TabsContent value="observations">
         {observations === null

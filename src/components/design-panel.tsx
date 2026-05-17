@@ -352,6 +352,21 @@ export function DesignPanel({
                 }}
               />
               <NumberField
+                id="minimumReliableRampAcceleration_mps2"
+                label="Minimum reliable acceleration"
+                unit="m/s^2"
+                value={formatNumber(
+                  modelInput.minimumReliableRampAcceleration_mps2,
+                  2
+                )}
+                onChange={(acceleration_mps2) => {
+                  updateInput(
+                    "minimumReliableRampAcceleration_mps2",
+                    acceleration_mps2
+                  )
+                }}
+              />
+              <NumberField
                 id="gravity_mps2"
                 label="Gravity"
                 unit="m/s^2"

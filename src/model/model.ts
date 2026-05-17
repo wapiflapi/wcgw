@@ -28,6 +28,7 @@ export type ModelInput = {
   marbleDensity_kgpm3: number
   rollingInertiaFactor_ratio: number
   staticFrictionCoefficient_ratio: number
+  minimumReliableRampAcceleration_mps2: number
   rampEnergyEfficiency_ratio: number
   impactRestitutionCoefficient_ratio: number
   impactFrictionCoefficient_ratio: number
@@ -56,6 +57,7 @@ export type Blueprint = {
   marbleDensity_kgpm3: BlueprintValue
   rollingInertiaFactor_ratio: BlueprintValue
   staticFrictionCoefficient_ratio: BlueprintValue
+  minimumReliableRampAcceleration_mps2: BlueprintValue
   rampEnergyEfficiency_ratio: BlueprintValue
   impactRestitutionCoefficient_ratio: BlueprintValue
   impactFrictionCoefficient_ratio: BlueprintValue
@@ -76,8 +78,19 @@ export type Snapshot = {
   time_s: number
 }
 
+export type ObservationChecks = {
+  ballisticsImpactFound: boolean | null
+  contactMovingIntoDrumOk: boolean | null
+  rampReliableAccelerationOk: boolean | null
+  rampRequiredStaticFrictionCoefficient_ratio: number | null
+  rampStaticFrictionOk: boolean | null
+}
+
 export type Observation = {
   blueprintRealization: BlueprintRealization
+  valid: boolean
+  invalidReason: string | null
+  checks: ObservationChecks
   releaseSnapshot: Snapshot
   dropSnapshot: Snapshot
   impactSnapshot: Snapshot

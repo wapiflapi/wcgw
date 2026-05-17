@@ -232,6 +232,11 @@ function remainingBlueprintEntries(blueprint: Blueprint): BlueprintItem[] {
       undefined,
       1
     ),
+    minimumReliableRampAcceleration_mps2: formatScalarItem(
+      "Minimum reliable ramp acceleration",
+      blueprint.minimumReliableRampAcceleration_mps2,
+      "m/s^2"
+    ),
     rampAngle_rad: formatScalarItem(
       "Ramp angle",
       blueprint.rampAngle_rad,

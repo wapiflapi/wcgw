@@ -223,6 +223,9 @@ export function solveBlueprint(input: ModelInput): Blueprint {
     staticFrictionCoefficient_ratio: blueprintValue(
       input.staticFrictionCoefficient_ratio
     ),
+    minimumReliableRampAcceleration_mps2: blueprintValue(
+      input.minimumReliableRampAcceleration_mps2
+    ),
     rampEnergyEfficiency_ratio: blueprintValue(
       input.rampEnergyEfficiency_ratio
     ),

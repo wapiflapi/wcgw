@@ -25,6 +25,7 @@ export const defaultModelInput: ModelInput = {
   marbleDensity_kgpm3: 7850,
   rollingInertiaFactor_ratio: 5 / 7,
   staticFrictionCoefficient_ratio: 0.5,
+  minimumReliableRampAcceleration_mps2: 0.05,
   rampEnergyEfficiency_ratio: 0.95,
   impactRestitutionCoefficient_ratio: 0.7,
   impactFrictionCoefficient_ratio: 0.3,
