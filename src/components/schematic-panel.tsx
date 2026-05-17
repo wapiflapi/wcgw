@@ -16,9 +16,9 @@ export function SchematicPanel({
   sampledObservations,
 }: SchematicPanelProps) {
   return (
-    <section className="grid h-full min-w-0 grid-rows-[2rem_minmax(0,1fr)]">
+    <section className="grid min-h-[420px] min-w-0 grid-rows-[2rem_minmax(0,1fr)] sm:h-full sm:min-h-0">
       <Toolbar />
-      <div className="max-h-[600px] min-h-0 min-w-0 overflow-auto p-4">
+      <div className="min-h-0 min-w-0 overflow-auto p-4 sm:max-h-[600px]">
         <SchematicBoard
           blueprint={blueprint}
           nominalObservation={nominalObservation}

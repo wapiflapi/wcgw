@@ -33,7 +33,6 @@ type SchematicElements = {
 }
 
 type MarblePathStyle = {
-  dash?: number
   strokeColor: string
   strokeOpacity?: number
   strokeWidth: number
@@ -188,7 +187,8 @@ function createVisiblePoint(
   colors: {
     background: string
     primary: string
-  }
+  },
+  size: number
 ) {
   return board.create("point", [point.x_m, point.y_m], {
     fillColor: colors.background,
@@ -196,8 +196,9 @@ function createVisiblePoint(
     highlightFillColor: colors.background,
     highlightStrokeColor: colors.primary,
     name: "",
-    size: 3,
+    size,
     strokeColor: colors.primary,
+    strokeWidth: 2,
   })
 }
 
@@ -209,8 +210,13 @@ function createSchematicElements(
     primary: string
   }
 ): SchematicElements {
-  const releasePoint = createVisiblePoint(board, geometry.releasePoint, colors)
-  const impactPoint = createVisiblePoint(board, geometry.impactPoint, colors)
+  const releasePoint = createVisiblePoint(
+    board,
+    geometry.releasePoint,
+    colors,
+    4
+  )
+  const impactPoint = createVisiblePoint(board, geometry.impactPoint, colors, 3)
   const rampExit = createHiddenPoint(board, geometry.rampExit)
   const drumLineA = createHiddenPoint(board, geometry.drumLineA)
   const drumLineB = createHiddenPoint(board, geometry.drumLineB)
@@ -362,7 +368,6 @@ function createMarblePathCurve(
     [[], []],
     {
       doAdvancedPlot: false,
-      dash: style.dash,
       fixed: true,
       highlight: false,
       highlightStrokeColor: style.strokeColor,
@@ -419,7 +424,6 @@ function hideMarblePathElements(elements: MarblePathElements) {
 
 function styleKey(style: MarblePathStyle) {
   return [
-    style.dash ?? "",
     style.strokeColor,
     style.strokeOpacity ?? "",
     style.strokeWidth,
@@ -441,7 +445,6 @@ function updateMarblePathStyle(
   }
 
   const attributes = {
-    dash: style.dash ?? 0,
     highlightStrokeColor: style.strokeColor,
     highlightStrokeOpacity: style.strokeOpacity,
     highlightStrokeWidth: style.strokeWidth,
@@ -575,6 +578,7 @@ export function SchematicBoard({
 }: SchematicBoardProps) {
   const boardId = `schematic-${useId().replaceAll(":", "")}`
   const { resolvedTheme } = useTheme()
+  const containerRef = useRef<HTMLDivElement | null>(null)
   const [renderedTheme, setRenderedTheme] = useState<
     typeof resolvedTheme | null
   >(null)
@@ -667,6 +671,27 @@ export function SchematicBoard({
   }, [boardId, resolvedTheme])
 
   useEffect(() => {
+    const container = containerRef.current
+
+    if (container === null) {
+      return
+    }
+
+    const resizeObserver = new ResizeObserver(() => {
+      boardRef.current?.resizeContainer(
+        container.clientWidth,
+        container.clientHeight
+      )
+    })
+
+    resizeObserver.observe(container)
+
+    return () => {
+      resizeObserver.disconnect()
+    }
+  }, [])
+
+  useEffect(() => {
     const board = boardRef.current
     const colors = colorsRef.current
 
@@ -716,7 +741,6 @@ export function SchematicBoard({
             {
               observation: nominalObservation,
               style: {
-                dash: 2,
                 strokeColor: colors.primary,
                 strokeOpacity: nominalObservationStale ? 0.25 : 1,
                 strokeWidth: 2,
@@ -750,6 +774,7 @@ export function SchematicBoard({
 
   return (
     <div
+      ref={containerRef}
       id={boardId}
       className={
         renderedTheme === resolvedTheme
