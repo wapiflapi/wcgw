@@ -7,7 +7,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   FieldRow,
-  FieldRowSm,
+  FieldRowCompact,
   NumberField,
   SliderField,
 } from "@/components/control-fields"
@@ -90,7 +90,7 @@ export function DesignPanel({
         <FieldGroup className="gap-4">
           <FieldSet>
             <FieldLegend>Marble</FieldLegend>
-            <FieldRow>
+            <FieldRowCompact>
               <NumberField
                 id="marbleDiameter_mm"
                 label="Diameter"
@@ -120,7 +120,7 @@ export function DesignPanel({
                   updateNominal("marbleMass_g", mass_g)
                 }}
               />
-            </FieldRow>
+            </FieldRowCompact>
             {isMarbleMassExpected ? null : (
               <FieldError>
                 Expected {formatNumber(expectedMarbleMassMin_g, 1)}-
@@ -132,7 +132,7 @@ export function DesignPanel({
 
           <FieldSet>
             <FieldLegend>Timing</FieldLegend>
-            <FieldRow>
+            <FieldRowCompact>
               <NumberField
                 id="timingDropHeight_mm"
                 label="Same as dropping from"
@@ -168,12 +168,12 @@ export function DesignPanel({
                   updateNominal("targetReleaseToImpactTime_s", msToS(time_ms))
                 }}
               />
-            </FieldRow>
+            </FieldRowCompact>
           </FieldSet>
 
           <FieldSet>
             <FieldLegend>Loudness</FieldLegend>
-            <FieldRow>
+            <FieldRowCompact>
               <NumberField
                 id="loudnessDropHeight_mm"
                 label="Same as dropping from"
@@ -206,7 +206,7 @@ export function DesignPanel({
                   updateNominal("targetNormalImpactSpeed_mps", speed_mps)
                 }}
               />
-            </FieldRow>
+            </FieldRowCompact>
           </FieldSet>
 
           <FieldSet>
@@ -216,7 +216,7 @@ export function DesignPanel({
               label="Ramp angle"
               unit="deg"
               value={radToDeg(modelInput.rampAngle_rad.nominal)}
-              min={-60}
+              min={-90}
               max={0}
               step={1}
               inverted
@@ -263,33 +263,73 @@ export function DesignPanel({
                   updateNominal("drumPivotAngle_rad", degToRad(angle_deg))
                 }}
               />
-              <FieldRowSm>
-                <SliderField
-                  id="drumPivotPoint_x_mm"
-                  label="Pivot X"
-                  unit="mm"
-                  value={mToMm(modelInput.drumPivotPoint_x_m.nominal)}
-                  min={-300}
-                  max={300}
-                  step={1}
-                  onChange={(point_x_mm) => {
-                    updateNominal("drumPivotPoint_x_m", mmToM(point_x_mm))
-                  }}
-                />
-                <SliderField
-                  id="drumPivotPoint_y_mm"
-                  label="Pivot Y"
-                  unit="mm"
-                  value={mToMm(modelInput.drumPivotPoint_y_m.nominal)}
-                  min={0}
-                  max={500}
-                  step={1}
-                  onChange={(point_y_mm) => {
-                    updateNominal("drumPivotPoint_y_m", mmToM(point_y_mm))
-                  }}
-                />
-              </FieldRowSm>
+              <SliderField
+                id="drumPivotArmLength_mm"
+                label="Pivot arm length"
+                unit="mm"
+                value={mToMm(modelInput.drumPivotArmLength_m.nominal)}
+                min={0}
+                max={1000}
+                step={1}
+                onChange={(length_mm) => {
+                  updateNominal("drumPivotArmLength_m", mmToM(length_mm))
+                }}
+              />
             </FieldGroup>
+          </FieldSet>
+
+          <FieldSet>
+            <FieldLegend>Manufacturing</FieldLegend>
+            <FieldRow>
+              <NumberField
+                id="manufacturingPositionTolerance_mm"
+                label="Positional tolerance"
+                prefix="±"
+                unit="mm"
+                value={formatNumber(
+                  mToMm(modelInput.manufacturingPositionTolerance_m.nominal),
+                  2
+                )}
+                onChange={(tolerance_mm) => {
+                  updateNominal(
+                    "manufacturingPositionTolerance_m",
+                    mmToM(tolerance_mm)
+                  )
+                }}
+              />
+              <NumberField
+                id="manufacturingLinearTolerance_mm"
+                label="Linear tolerance"
+                prefix="±"
+                unit="mm"
+                value={formatNumber(
+                  mToMm(modelInput.manufacturingLinearTolerance_m.nominal),
+                  2
+                )}
+                onChange={(tolerance_mm) => {
+                  updateNominal(
+                    "manufacturingLinearTolerance_m",
+                    mmToM(tolerance_mm)
+                  )
+                }}
+              />
+              <NumberField
+                id="manufacturingAngleTolerance_deg"
+                label="Angular tolerance"
+                prefix="±"
+                unit="deg"
+                value={formatNumber(
+                  radToDeg(modelInput.manufacturingAngleTolerance_rad.nominal),
+                  2
+                )}
+                onChange={(tolerance_deg) => {
+                  updateNominal(
+                    "manufacturingAngleTolerance_rad",
+                    degToRad(tolerance_deg)
+                  )
+                }}
+              />
+            </FieldRow>
           </FieldSet>
 
           <FieldSet>

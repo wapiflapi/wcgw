@@ -23,9 +23,11 @@ export const defaultModelInput: ModelInput = {
   impactPoint_x_m: inputValue(0),
   impactPoint_y_m: inputValue(0),
   drumTiltAngle_rad: inputValue(0),
-  drumPivotPoint_x_m: inputValue(0.05),
-  drumPivotPoint_y_m: inputValue(0),
+  drumPivotArmLength_m: inputValue(0.5),
   drumPivotAngle_rad: inputValue(0),
+  manufacturingPositionTolerance_m: inputValue(0.005),
+  manufacturingLinearTolerance_m: inputValue(0.0005),
+  manufacturingAngleTolerance_rad: inputValue(degToRad(1)),
 
   gravity_mps2: inputValue(9.81),
   marbleDensity_kgpm3: inputValue(7850),

@@ -13,6 +13,7 @@ import { formatNumber } from "@/lib/format"
 type NumberFieldProps = {
   id: string
   label: string
+  prefix?: string
   unit?: string
   value?: string
   defaultValue?: string
@@ -48,6 +49,7 @@ function getNumberStep(value: string) {
 export function NumberField({
   id,
   label,
+  prefix,
   unit,
   value,
   defaultValue,
@@ -62,6 +64,11 @@ export function NumberField({
     <Field>
       <FieldLabel htmlFor={id}>{label}</FieldLabel>
       <InputGroup>
+        {prefix ? (
+          <InputGroupAddon align="inline-start">
+            <InputGroupText>{prefix}</InputGroupText>
+          </InputGroupAddon>
+        ) : null}
         <InputGroupInput
           id={id}
           type="number"
@@ -102,6 +109,10 @@ export function NumberField({
 }
 
 export function FieldRow({ children }: { children: React.ReactNode }) {
+  return <div className="grid gap-4 xs:grid-cols-2">{children}</div>
+}
+
+export function FieldRowCompact({ children }: { children: React.ReactNode }) {
   return (
     <div className="grid gap-4 xs:grid-cols-[minmax(0,1fr)_8rem]">
       {children}

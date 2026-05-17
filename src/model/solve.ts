@@ -18,10 +18,10 @@ type DrumGeometry = {
   impactPoint_y_m: number
 }
 
-function blueprintSolvedValue(nominal: number): BlueprintValue {
+function blueprintSolvedValue(nominal: number, tolerance = 0): BlueprintValue {
   return {
-    max: nominal,
-    min: nominal,
+    max: nominal + tolerance,
+    min: nominal - tolerance,
     nominal,
   }
 }
@@ -163,6 +163,15 @@ function solveRampLaunchGeometry(
 export function solveBlueprint(input: ModelInput): Blueprint {
   const drumGeometry = solveDrumGeometry(input)
   const rampLaunchGeometry = solveRampLaunchGeometry(input, drumGeometry)
+  const manufacturingPositionTolerance_m = Math.abs(
+    input.manufacturingPositionTolerance_m.nominal
+  )
+  const manufacturingLinearTolerance_m = Math.abs(
+    input.manufacturingLinearTolerance_m.nominal
+  )
+  const manufacturingAngleTolerance_rad = Math.abs(
+    input.manufacturingAngleTolerance_rad.nominal
+  )
 
   return {
     marbleDiameter_m: blueprintValue(input.marbleDiameter_m),
@@ -175,16 +184,51 @@ export function solveBlueprint(input: ModelInput): Blueprint {
       input.targetNormalImpactSpeed_mps
     ),
 
-    rampAngle_rad: blueprintValue(input.rampAngle_rad),
-    rampLength_m: blueprintSolvedValue(rampLaunchGeometry.rampLength_m),
-    releasePoint_x_m: blueprintSolvedValue(rampLaunchGeometry.releasePoint_x_m),
-    releasePoint_y_m: blueprintSolvedValue(rampLaunchGeometry.releasePoint_y_m),
-    impactPoint_x_m: blueprintSolvedValue(drumGeometry.impactPoint_x_m),
-    impactPoint_y_m: blueprintSolvedValue(drumGeometry.impactPoint_y_m),
-    drumTiltAngle_rad: blueprintValue(input.drumTiltAngle_rad),
-    drumPivotPoint_x_m: blueprintValue(input.drumPivotPoint_x_m),
-    drumPivotPoint_y_m: blueprintValue(input.drumPivotPoint_y_m),
-    drumPivotAngle_rad: blueprintValue(input.drumPivotAngle_rad),
+    rampAngle_rad: blueprintSolvedValue(
+      input.rampAngle_rad.nominal,
+      manufacturingAngleTolerance_rad
+    ),
+    rampLength_m: blueprintSolvedValue(
+      rampLaunchGeometry.rampLength_m,
+      manufacturingLinearTolerance_m
+    ),
+    releasePoint_x_m: blueprintSolvedValue(
+      rampLaunchGeometry.releasePoint_x_m,
+      manufacturingPositionTolerance_m
+    ),
+    releasePoint_y_m: blueprintSolvedValue(
+      rampLaunchGeometry.releasePoint_y_m,
+      manufacturingPositionTolerance_m
+    ),
+    impactPoint_x_m: blueprintSolvedValue(
+      drumGeometry.impactPoint_x_m,
+      manufacturingPositionTolerance_m
+    ),
+    impactPoint_y_m: blueprintSolvedValue(
+      drumGeometry.impactPoint_y_m,
+      manufacturingPositionTolerance_m
+    ),
+    drumTiltAngle_rad: blueprintSolvedValue(
+      input.drumTiltAngle_rad.nominal,
+      manufacturingAngleTolerance_rad
+    ),
+    drumPivotArmLength_m: blueprintSolvedValue(
+      input.drumPivotArmLength_m.nominal,
+      manufacturingLinearTolerance_m
+    ),
+    drumPivotAngle_rad: blueprintSolvedValue(
+      input.drumPivotAngle_rad.nominal,
+      manufacturingAngleTolerance_rad
+    ),
+    manufacturingPositionTolerance_m: blueprintValue(
+      input.manufacturingPositionTolerance_m
+    ),
+    manufacturingLinearTolerance_m: blueprintValue(
+      input.manufacturingLinearTolerance_m
+    ),
+    manufacturingAngleTolerance_rad: blueprintValue(
+      input.manufacturingAngleTolerance_rad
+    ),
 
     gravity_mps2: blueprintValue(input.gravity_mps2),
     marbleDensity_kgpm3: blueprintValue(input.marbleDensity_kgpm3),

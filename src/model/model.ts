@@ -24,9 +24,11 @@ export type ModelInput = {
   impactPoint_x_m: InputValue
   impactPoint_y_m: InputValue
   drumTiltAngle_rad: InputValue
-  drumPivotPoint_x_m: InputValue
-  drumPivotPoint_y_m: InputValue
+  drumPivotArmLength_m: InputValue
   drumPivotAngle_rad: InputValue
+  manufacturingPositionTolerance_m: InputValue
+  manufacturingLinearTolerance_m: InputValue
+  manufacturingAngleTolerance_rad: InputValue
 
   gravity_mps2: InputValue
   marbleDensity_kgpm3: InputValue
@@ -53,9 +55,11 @@ export type Blueprint = {
   impactPoint_x_m: BlueprintValue
   impactPoint_y_m: BlueprintValue
   drumTiltAngle_rad: BlueprintValue
-  drumPivotPoint_x_m: BlueprintValue
-  drumPivotPoint_y_m: BlueprintValue
+  drumPivotArmLength_m: BlueprintValue
   drumPivotAngle_rad: BlueprintValue
+  manufacturingPositionTolerance_m: BlueprintValue
+  manufacturingLinearTolerance_m: BlueprintValue
+  manufacturingAngleTolerance_rad: BlueprintValue
 
   gravity_mps2: BlueprintValue
   marbleDensity_kgpm3: BlueprintValue
