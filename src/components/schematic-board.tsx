@@ -340,7 +340,7 @@ function getProjectilePathPoints(
   const yValues_m: number[] = []
 
   for (let index = 0; index < pointCount; index += 1) {
-    const ratio = pointCount === 1 ? 0 : index / (pointCount - 1)
+    const ratio = index / (pointCount - 1)
     const time_s = safeEndTime_s * ratio
 
     xValues_m.push(projectilePosition_x_m(snapshot, time_s))
