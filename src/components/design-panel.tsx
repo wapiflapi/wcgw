@@ -62,6 +62,33 @@ export function DesignPanel({
     expectedMarbleMass_g,
     0.1
   )
+  const referenceDropHeight_m = 1
+  const referenceDropTime_s = getFreeFallDurationFromHeight_s(
+    referenceDropHeight_m,
+    gravity_mps2
+  )
+  const positionTolerance_m = Math.abs(
+    modelInput.manufacturingPositionTolerance_m
+  )
+  const lowerToleranceDropHeight_m = Math.max(
+    0,
+    referenceDropHeight_m - positionTolerance_m
+  )
+  const lowerToleranceDropTime_s = getFreeFallDurationFromHeight_s(
+    lowerToleranceDropHeight_m,
+    gravity_mps2
+  )
+  const upperToleranceDropTime_s = getFreeFallDurationFromHeight_s(
+    referenceDropHeight_m + positionTolerance_m,
+    gravity_mps2
+  )
+  const positionToleranceTimingError_s = Math.max(
+    Math.abs(referenceDropTime_s - lowerToleranceDropTime_s),
+    Math.abs(upperToleranceDropTime_s - referenceDropTime_s)
+  )
+  const isPositionToleranceWithinTimingTolerance =
+    positionToleranceTimingError_s <=
+    Math.abs(modelInput.targetReleaseToImpactTimeTolerance_s)
 
   return (
     <Tabs defaultValue="blueprint">
@@ -266,8 +293,24 @@ export function DesignPanel({
           </FieldSet>
 
           <FieldSet>
-            <FieldLegend>Manufacturing</FieldLegend>
+            <FieldLegend>Tolerances</FieldLegend>
             <FieldRow>
+              <NumberField
+                id="targetReleaseToImpactTimeTolerance_ms"
+                label="Timing tolerance"
+                prefix="±"
+                unit="ms"
+                value={formatNumber(
+                  sToMs(modelInput.targetReleaseToImpactTimeTolerance_s),
+                  1
+                )}
+                onChange={(tolerance_ms) => {
+                  updateInput(
+                    "targetReleaseToImpactTimeTolerance_s",
+                    msToS(tolerance_ms)
+                  )
+                }}
+              />
               <NumberField
                 id="manufacturingPositionTolerance_mm"
                 label="Positional tolerance"
@@ -317,6 +360,17 @@ export function DesignPanel({
                 }}
               />
             </FieldRow>
+            {isPositionToleranceWithinTimingTolerance ? null : (
+              <FieldError>
+                Positional tolerance can shift a 1 m free fall by{" "}
+                {formatNumber(sToMs(positionToleranceTimingError_s), 2)} ms,
+                above the {formatNumber(
+                  sToMs(Math.abs(modelInput.targetReleaseToImpactTimeTolerance_s)),
+                  2
+                )}{" "}
+                ms timing tolerance.
+              </FieldError>
+            )}
           </FieldSet>
 
           <FieldSet>
@@ -332,6 +386,18 @@ export function DesignPanel({
                 )}
                 onChange={(coefficient) => {
                   updateInput("staticFrictionCoefficient_ratio", coefficient)
+                }}
+              />
+              <NumberField
+                id="kineticFrictionCoefficient_ratio"
+                label="Kinetic friction"
+                unit="mu"
+                value={formatNumber(
+                  modelInput.kineticFrictionCoefficient_ratio,
+                  2
+                )}
+                onChange={(coefficient) => {
+                  updateInput("kineticFrictionCoefficient_ratio", coefficient)
                 }}
               />
               <NumberField

@@ -1,8 +1,11 @@
 import type {
   BlueprintRealization,
+  BooleanCheckAggregate,
   Observation,
+  ObservationCheckAggregate,
   ObservationChecks,
   ObservationAggregate,
+  NumericCheckAggregate,
   Snapshot,
 } from "@/model/model"
 
@@ -15,11 +18,169 @@ type SimulationStageResult = {
 const emptyChecks: ObservationChecks = {
   ballisticsImpactFound: null,
   contactMovingIntoDrumOk: null,
-  targetNormalImpactSpeedError_mps: null,
-  targetReleaseToImpactTimeError_s: null,
+  targetNormalImpactSpeedDeviation_mps: null,
+  targetReleaseToImpactTimeDeviation_s: null,
   rampReliableAccelerationOk: null,
   rampRequiredStaticFrictionCoefficient_ratio: null,
   rampStaticFrictionOk: null,
+}
+
+function createBooleanCheckAggregate(): BooleanCheckAggregate {
+  return {
+    checkedCount: 0,
+    failedCount: 0,
+  }
+}
+
+function reduceBooleanCheckAggregate(
+  aggregate: BooleanCheckAggregate,
+  value: boolean | null
+): BooleanCheckAggregate {
+  if (value === null) {
+    return aggregate
+  }
+
+  return {
+    checkedCount: aggregate.checkedCount + 1,
+    failedCount: aggregate.failedCount + (value ? 0 : 1),
+  }
+}
+
+function createNumericCheckAggregate(): NumericCheckAggregate {
+  return {
+    count: 0,
+    meanAbsolute: 0,
+    min: Number.POSITIVE_INFINITY,
+    max: Number.NEGATIVE_INFINITY,
+    signedMean: 0,
+    varianceAccumulator: 0,
+  }
+}
+
+function reduceNumericCheckAggregate(
+  aggregate: NumericCheckAggregate,
+  value: number | null
+): NumericCheckAggregate {
+  if (value === null || !Number.isFinite(value)) {
+    return aggregate
+  }
+
+  const count = aggregate.count + 1
+  const absoluteValue = Math.abs(value)
+  const absoluteDelta = absoluteValue - aggregate.meanAbsolute
+  const meanAbsolute = aggregate.meanAbsolute + absoluteDelta / count
+  const signedDelta = value - aggregate.signedMean
+  const signedMean = aggregate.signedMean + signedDelta / count
+  const nextSignedDelta = value - signedMean
+
+  return {
+    count,
+    meanAbsolute,
+    min: Math.min(aggregate.min, value),
+    max: Math.max(aggregate.max, value),
+    signedMean,
+    varianceAccumulator:
+      aggregate.varianceAccumulator + signedDelta * nextSignedDelta,
+  }
+}
+
+function createObservationCheckAggregate(): ObservationCheckAggregate {
+  return {
+    observationCount: 0,
+    invalidCount: 0,
+    ballisticsImpactFound: createBooleanCheckAggregate(),
+    contactMovingIntoDrumOk: createBooleanCheckAggregate(),
+    rampReliableAccelerationOk: createBooleanCheckAggregate(),
+    rampStaticFrictionOk: createBooleanCheckAggregate(),
+    targetNormalImpactSpeedDeviation_mps: createNumericCheckAggregate(),
+    targetReleaseToImpactTimeDeviation_s: createNumericCheckAggregate(),
+  }
+}
+
+function reduceObservationCheckAggregate(
+  aggregate: ObservationCheckAggregate,
+  observation: Observation
+): ObservationCheckAggregate {
+  return {
+    observationCount: aggregate.observationCount + 1,
+    invalidCount: aggregate.invalidCount + (observation.valid ? 0 : 1),
+    ballisticsImpactFound: reduceBooleanCheckAggregate(
+      aggregate.ballisticsImpactFound,
+      observation.checks.ballisticsImpactFound
+    ),
+    contactMovingIntoDrumOk: reduceBooleanCheckAggregate(
+      aggregate.contactMovingIntoDrumOk,
+      observation.checks.contactMovingIntoDrumOk
+    ),
+    rampReliableAccelerationOk: reduceBooleanCheckAggregate(
+      aggregate.rampReliableAccelerationOk,
+      observation.checks.rampReliableAccelerationOk
+    ),
+    rampStaticFrictionOk: reduceBooleanCheckAggregate(
+      aggregate.rampStaticFrictionOk,
+      observation.checks.rampStaticFrictionOk
+    ),
+    targetNormalImpactSpeedDeviation_mps: reduceNumericCheckAggregate(
+      aggregate.targetNormalImpactSpeedDeviation_mps,
+      observation.checks.targetNormalImpactSpeedDeviation_mps
+    ),
+    targetReleaseToImpactTimeDeviation_s: reduceNumericCheckAggregate(
+      aggregate.targetReleaseToImpactTimeDeviation_s,
+      observation.checks.targetReleaseToImpactTimeDeviation_s
+    ),
+  }
+}
+
+function getTimingDeviation_s(observation: Observation) {
+  return observation.checks.targetReleaseToImpactTimeDeviation_s
+}
+
+function getImpactSpeedDeviation_mps(observation: Observation) {
+  return observation.checks.targetNormalImpactSpeedDeviation_mps
+}
+
+function replaceIfLowerDeviation(
+  currentObservation: Observation | null,
+  candidateObservation: Observation,
+  getDeviation: (observation: Observation) => number | null
+) {
+  const candidateDeviation = getDeviation(candidateObservation)
+
+  if (candidateDeviation === null || !Number.isFinite(candidateDeviation)) {
+    return currentObservation
+  }
+
+  if (currentObservation === null) {
+    return candidateObservation
+  }
+
+  const currentDeviation = getDeviation(currentObservation)
+
+  return currentDeviation === null || candidateDeviation < currentDeviation
+    ? candidateObservation
+    : currentObservation
+}
+
+function replaceIfHigherDeviation(
+  currentObservation: Observation | null,
+  candidateObservation: Observation,
+  getDeviation: (observation: Observation) => number | null
+) {
+  const candidateDeviation = getDeviation(candidateObservation)
+
+  if (candidateDeviation === null || !Number.isFinite(candidateDeviation)) {
+    return currentObservation
+  }
+
+  if (currentObservation === null) {
+    return candidateObservation
+  }
+
+  const currentDeviation = getDeviation(currentObservation)
+
+  return currentDeviation === null || candidateDeviation > currentDeviation
+    ? candidateObservation
+    : currentObservation
 }
 
 function getPivotedDrumSurfaceAngle_rad(
@@ -121,15 +282,6 @@ function simulateRampUntilDrop(
     rollingInertiaFactor_ratio *
     gravityAlongRamp_mps2
 
-  // Existing forward speed means the marble is already moving along the ramp.
-  const rampAlreadyMovingOk = releaseSpeedAlongRamp_mps > 0
-
-  // Very small acceleration may not overcome real-world imperfections.
-  const rampReliableAccelerationOk =
-    rampAlreadyMovingOk ||
-    Math.abs(rampAcceleration_mps2) >=
-      Math.abs(minimumReliableRampAcceleration_mps2)
-
   // Gravity component that presses the marble into the ramp.
   const rampNormalAcceleration_mps2 = gravity_mps2 * Math.cos(rampAngle_rad)
 
@@ -148,6 +300,39 @@ function simulateRampUntilDrop(
   const rampStaticFrictionOk =
     rampRequiredStaticFrictionCoefficient_ratio <=
     blueprintRealization.staticFrictionCoefficient_ratio
+
+  // Kinetic friction is used only while the contact patch is sliding.
+  const kineticFrictionCoefficient_ratio =
+    blueprintRealization.kineticFrictionCoefficient_ratio
+
+  // In this simple model, kinetic friction should not exceed static friction.
+  const effectiveKineticFrictionCoefficient_ratio = Math.min(
+    Math.max(0, kineticFrictionCoefficient_ratio),
+    Math.max(0, blueprintRealization.staticFrictionCoefficient_ratio)
+  )
+
+  // Kinetic friction acceleration scale.
+  const kineticFrictionAcceleration_mps2 =
+    effectiveKineticFrictionCoefficient_ratio *
+    Math.max(0, rampNormalAcceleration_mps2)
+
+  // Existing forward speed means the marble is already moving along the ramp.
+  const rampAlreadyMovingOk = releaseSpeedAlongRamp_mps > 0
+
+  // If we cannot rely on static rolling, the ramp initially uses sliding.
+  const startingSlipSign = gravityAlongRamp_mps2 >= 0 ? 1 : -1
+  const startingSlidingAcceleration_mps2 =
+    gravityAlongRamp_mps2 -
+    startingSlipSign * kineticFrictionAcceleration_mps2
+
+  // Very small acceleration may not overcome real-world imperfections.
+  const rampReliableAccelerationOk =
+    rampAlreadyMovingOk ||
+    Math.abs(
+      rampStaticFrictionOk
+        ? rampAcceleration_mps2
+        : startingSlidingAcceleration_mps2
+    ) >= Math.abs(minimumReliableRampAcceleration_mps2)
 
   const checks = {
     rampReliableAccelerationOk,
@@ -182,60 +367,294 @@ function simulateRampUntilDrop(
     }
   }
 
-  // This simulation stage assumes rolling without slipping.
-  if (!rampStaticFrictionOk) {
+  // Rolling acceleration factor beta maps to I = c m r^2.
+  const marbleInertiaCoefficient_ratio =
+    1 / rollingInertiaFactor_ratio - 1
+
+  // Without inertia, friction cannot convert sliding into spin.
+  if (
+    !Number.isFinite(marbleInertiaCoefficient_ratio) ||
+    marbleInertiaCoefficient_ratio <= 0
+  ) {
     return {
       snapshot: releaseSnapshot,
       checks,
-      invalidReason: "Ramp static friction is too low for no-slip rolling.",
+      invalidReason: "Rolling inertia factor is invalid.",
     }
   }
 
-  // Predicted by the kinematic equation: v1^2 = v0^2 + 2 a L.
-  const predictedExitSpeedSquared_m2ps2 =
-    releaseSpeedAlongRamp_mps ** 2 + 2 * rampAcceleration_mps2 * rampLength_m
+  function travelTimeForDistance_s(
+    distance_m: number,
+    speed_mps: number,
+    acceleration_mps2: number
+  ) {
+    // Zero distance means the segment is already complete.
+    if (distance_m === 0) {
+      return 0
+    }
 
-  // Negative predicted squared speed means no real exit speed exists.
-  if (predictedExitSpeedSquared_m2ps2 < 0) {
+    // Constant speed case: L = v t.
+    if (Math.abs(acceleration_mps2) <= Number.EPSILON) {
+      return speed_mps > 0 ? distance_m / speed_mps : null
+    }
+
+    // Predicted by the kinematic equation: v1^2 = v0^2 + 2 a L.
+    const predictedSpeedSquared_m2ps2 =
+      speed_mps ** 2 + 2 * acceleration_mps2 * distance_m
+
+    // Negative predicted squared speed means no real exit speed exists.
+    if (predictedSpeedSquared_m2ps2 < 0) {
+      return null
+    }
+
+    // Candidate exit speeds from the quadratic equation.
+    const predictedSpeed_mps = Math.sqrt(predictedSpeedSquared_m2ps2)
+
+    // Kinematic equation: v1 = v0 + a t.
+    const firstTime_s = (predictedSpeed_mps - speed_mps) / acceleration_mps2
+
+    // The second root matters when acceleration is negative.
+    const secondTime_s = (-predictedSpeed_mps - speed_mps) / acceleration_mps2
+
+    // Keep the earliest physical time.
+    const positiveTimes_s = [firstTime_s, secondTime_s].filter(
+      (time_s) => Number.isFinite(time_s) && time_s >= 0
+    )
+
+    return positiveTimes_s.length > 0 ? Math.min(...positiveTimes_s) : null
+  }
+
+  type RampSegmentResult = {
+    distance_m: number
+    speed_mps: number
+    spin_radps: number
+    time_s: number
+  }
+
+  function simulateRollingSegment(
+    distance_m: number,
+    startSpeed_mps: number,
+    startSpin_radps: number
+  ): RampSegmentResult | null {
+    const segmentTime_s = travelTimeForDistance_s(
+      distance_m,
+      startSpeed_mps,
+      rampAcceleration_mps2
+    )
+
+    if (segmentTime_s === null) {
+      return null
+    }
+
+    // Kinematic equation: v1 = v0 + a t.
+    const endSpeed_mps =
+      startSpeed_mps + rampAcceleration_mps2 * segmentTime_s
+
+    // No-slip rolling keeps v = omega r.
+    const endSpin_radps =
+      startSpin_radps + (endSpeed_mps - startSpeed_mps) / marbleRadius_m
+
     return {
-      snapshot: releaseSnapshot,
-      checks,
-      invalidReason:
-        "Ramp acceleration cannot carry the marble to the drop point.",
+      distance_m,
+      speed_mps: endSpeed_mps,
+      spin_radps: endSpin_radps,
+      time_s: segmentTime_s,
     }
   }
 
-  // Speed along the ramp at the drop point.
-  const exitSpeedAlongRamp_mps = Math.sqrt(predictedExitSpeedSquared_m2ps2)
+  function simulateSlidingSegment(
+    distance_m: number,
+    startSpeed_mps: number,
+    startSpin_radps: number,
+    slipSign: number
+  ): RampSegmentResult | null {
+    // Kinetic friction pushes against the slipping contact patch.
+    const segmentAcceleration_mps2 =
+      gravityAlongRamp_mps2 -
+      slipSign * kineticFrictionAcceleration_mps2
 
-  // Time spent on the ramp.
+    // The same friction creates torque and changes spin.
+    const segmentSpinAcceleration_radps2 =
+      (slipSign * kineticFrictionAcceleration_mps2) /
+      (marbleInertiaCoefficient_ratio * marbleRadius_m)
+
+    const segmentTime_s = travelTimeForDistance_s(
+      distance_m,
+      startSpeed_mps,
+      segmentAcceleration_mps2
+    )
+
+    if (segmentTime_s === null) {
+      return null
+    }
+
+    // Kinematic equation: v1 = v0 + a t.
+    const endSpeed_mps =
+      startSpeed_mps + segmentAcceleration_mps2 * segmentTime_s
+
+    // Angular kinematic equation: omega1 = omega0 + alpha t.
+    const endSpin_radps =
+      startSpin_radps + segmentSpinAcceleration_radps2 * segmentTime_s
+
+    return {
+      distance_m,
+      speed_mps: endSpeed_mps,
+      spin_radps: endSpin_radps,
+      time_s: segmentTime_s,
+    }
+  }
+
+  // Current spin under our ramp convention.
+  const releaseSpin_radps = releaseSnapshot.marbleSpin_radps
+
+  // Contact patch slip speed. Zero means v = omega r and pure rolling is possible.
+  const releaseSlipSpeed_mps =
+    releaseSpeedAlongRamp_mps - releaseSpin_radps * marbleRadius_m
+
+  // Numerical tolerance for deciding whether contact is already no-slip.
+  const slipSpeedTolerance_mps = 1e-9
+
+  // Rolling can start immediately only if the state is already no-slip.
+  const startsRolling =
+    rampStaticFrictionOk &&
+    Math.abs(releaseSlipSpeed_mps) <= slipSpeedTolerance_mps
+
+  let exitSpeedAlongRamp_mps: number
+  let dropSpin_radps: number
   let rampTime_s: number
 
-  // Kinematic equation: v1 = v0 + a t.
-  if (Math.abs(rampAcceleration_mps2) > Number.EPSILON) {
-    rampTime_s =
-      (exitSpeedAlongRamp_mps - releaseSpeedAlongRamp_mps) /
-      rampAcceleration_mps2
+  if (startsRolling) {
+    const rollingResult = simulateRollingSegment(
+      rampLength_m,
+      releaseSpeedAlongRamp_mps,
+      releaseSpin_radps
+    )
 
-  } else if (releaseSpeedAlongRamp_mps > 0) {
-    // No acceleration means constant speed along the ramp.
-    rampTime_s = rampLength_m / releaseSpeedAlongRamp_mps
+    if (rollingResult === null) {
+      return {
+        snapshot: releaseSnapshot,
+        checks,
+        invalidReason:
+          "Ramp acceleration cannot carry the marble to the drop point.",
+      }
+    }
 
+    exitSpeedAlongRamp_mps = rollingResult.speed_mps
+    dropSpin_radps = rollingResult.spin_radps
+    rampTime_s = rollingResult.time_s
   } else {
-    // No acceleration and no release speed means nothing moves.
-    return {
-      snapshot: releaseSnapshot,
-      checks,
-      invalidReason: "Ramp acceleration and release speed are both zero.",
+    // Positive slip means the marble is outrunning its spin.
+    const firstSlipSign =
+      Math.abs(releaseSlipSpeed_mps) > slipSpeedTolerance_mps
+        ? Math.sign(releaseSlipSpeed_mps)
+        : startingSlipSign
+
+    // Sliding linear acceleration while that slip direction remains true.
+    const slidingAcceleration_mps2 =
+      gravityAlongRamp_mps2 -
+      firstSlipSign * kineticFrictionAcceleration_mps2
+
+    // Sliding angular acceleration while that slip direction remains true.
+    const slidingSpinAcceleration_radps2 =
+      (firstSlipSign * kineticFrictionAcceleration_mps2) /
+      (marbleInertiaCoefficient_ratio * marbleRadius_m)
+
+    // Slip changes as linear speed and surface spin speed diverge or converge.
+    const slipAcceleration_mps2 =
+      slidingAcceleration_mps2 -
+      slidingSpinAcceleration_radps2 * marbleRadius_m
+
+    // Time until v = omega r, if friction is closing the slip gap.
+    const timeUntilNoSlip_s =
+      releaseSlipSpeed_mps * slipAcceleration_mps2 < 0
+        ? -releaseSlipSpeed_mps / slipAcceleration_mps2
+        : null
+
+    // Distance traveled before the contact patch catches up.
+    const distanceUntilNoSlip_m =
+      timeUntilNoSlip_s === null
+        ? null
+        : releaseSpeedAlongRamp_mps * timeUntilNoSlip_s +
+          0.5 * slidingAcceleration_mps2 * timeUntilNoSlip_s ** 2
+
+    const canCatchAndRoll =
+      rampStaticFrictionOk &&
+      timeUntilNoSlip_s !== null &&
+      distanceUntilNoSlip_m !== null &&
+      timeUntilNoSlip_s >= 0 &&
+      distanceUntilNoSlip_m >= 0 &&
+      distanceUntilNoSlip_m <= rampLength_m
+
+    if (canCatchAndRoll) {
+      const slidingResult = simulateSlidingSegment(
+        distanceUntilNoSlip_m,
+        releaseSpeedAlongRamp_mps,
+        releaseSpin_radps,
+        firstSlipSign
+      )
+
+      if (slidingResult === null) {
+        return {
+          snapshot: releaseSnapshot,
+          checks,
+          invalidReason:
+            "Sliding friction cannot carry the marble to rolling contact.",
+        }
+      }
+
+      const rollingResult = simulateRollingSegment(
+        rampLength_m - slidingResult.distance_m,
+        slidingResult.speed_mps,
+        slidingResult.spin_radps
+      )
+
+      if (rollingResult === null) {
+        return {
+          snapshot: releaseSnapshot,
+          checks,
+          invalidReason:
+            "Rolling acceleration cannot carry the marble to the drop point.",
+        }
+      }
+
+      exitSpeedAlongRamp_mps = rollingResult.speed_mps
+      dropSpin_radps = rollingResult.spin_radps
+      rampTime_s = slidingResult.time_s + rollingResult.time_s
+    } else {
+      const slidingResult = simulateSlidingSegment(
+        rampLength_m,
+        releaseSpeedAlongRamp_mps,
+        releaseSpin_radps,
+        firstSlipSign
+      )
+
+      if (slidingResult === null) {
+        return {
+          snapshot: releaseSnapshot,
+          checks,
+          invalidReason:
+            "Sliding friction cannot carry the marble to the drop point.",
+        }
+      }
+
+      exitSpeedAlongRamp_mps = slidingResult.speed_mps
+      dropSpin_radps = slidingResult.spin_radps
+      rampTime_s = slidingResult.time_s
     }
   }
 
-  // Negative or non-finite time means the kinematics are not physical.
-  if (!Number.isFinite(rampTime_s) || rampTime_s < 0) {
+  // Negative or non-finite values mean the kinematics are not physical.
+  if (
+    !Number.isFinite(rampTime_s) ||
+    rampTime_s < 0 ||
+    !Number.isFinite(exitSpeedAlongRamp_mps) ||
+    exitSpeedAlongRamp_mps < 0 ||
+    !Number.isFinite(dropSpin_radps)
+  ) {
     return {
       snapshot: releaseSnapshot,
       checks,
-      invalidReason: "Ramp travel time is invalid.",
+      invalidReason: "Ramp travel result is invalid.",
     }
   }
 
@@ -252,13 +671,6 @@ function simulateRampUntilDrop(
 
   // Drop speed vector points along the ramp.
   const dropSpeed_y_mps = rampDirection.y * exitSpeedAlongRamp_mps
-
-  // No-slip rolling converts the change in linear speed to spin.
-  const spinGain_radps =
-    (exitSpeedAlongRamp_mps - releaseSpeedAlongRamp_mps) / marbleRadius_m
-
-  // Spin at the drop point.
-  const dropSpin_radps = releaseSnapshot.marbleSpin_radps + spinGain_radps
 
   // Simulation time at the drop point.
   const dropTime_s = releaseSnapshot.time_s + rampTime_s
@@ -531,23 +943,23 @@ function simulateContactUntilBounce(
   // Target verification only makes sense if the marble really reached impact.
   const canVerifyTargets = impactIsTrusted
 
-  // The error is actual total time minus requested total time.
-  const targetReleaseToImpactTimeError_s = canVerifyTargets
+  // The deviation is actual total time minus requested total time.
+  const targetReleaseToImpactTimeDeviation_s = canVerifyTargets
     ? impactSnapshot.time_s -
       releaseSnapshot.time_s -
       blueprintRealization.targetReleaseToImpactTime_s
     : null
 
   // The impact speed target is measured into the drum normal.
-  const targetNormalImpactSpeedError_mps = canVerifyTargets
+  const targetNormalImpactSpeedDeviation_mps = canVerifyTargets
     ? -impactNormalSpeed_mps -
       blueprintRealization.targetNormalImpactSpeed_mps
     : null
 
   const checks = {
     contactMovingIntoDrumOk,
-    targetNormalImpactSpeedError_mps,
-    targetReleaseToImpactTimeError_s,
+    targetNormalImpactSpeedDeviation_mps,
+    targetReleaseToImpactTimeDeviation_s,
   }
 
   if (marbleRadius_m <= 0) {
@@ -687,6 +1099,11 @@ export function createObservationAggregate(
     completedRuns: 0,
     requestedRuns,
     nominalObservation: null,
+    earliestTimingObservation: null,
+    latestTimingObservation: null,
+    quietestImpactObservation: null,
+    loudestImpactObservation: null,
+    checkAggregate: createObservationCheckAggregate(),
     samples: [],
   }
 }
@@ -716,6 +1133,30 @@ export function reduceObservationAggregate(
   return {
     ...aggregate,
     completedRuns,
+    earliestTimingObservation: replaceIfLowerDeviation(
+      aggregate.earliestTimingObservation,
+      observation,
+      getTimingDeviation_s
+    ),
+    latestTimingObservation: replaceIfHigherDeviation(
+      aggregate.latestTimingObservation,
+      observation,
+      getTimingDeviation_s
+    ),
+    quietestImpactObservation: replaceIfLowerDeviation(
+      aggregate.quietestImpactObservation,
+      observation,
+      getImpactSpeedDeviation_mps
+    ),
+    loudestImpactObservation: replaceIfHigherDeviation(
+      aggregate.loudestImpactObservation,
+      observation,
+      getImpactSpeedDeviation_mps
+    ),
+    checkAggregate: reduceObservationCheckAggregate(
+      aggregate.checkAggregate,
+      observation
+    ),
     samples,
   }
 }

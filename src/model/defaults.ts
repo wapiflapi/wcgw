@@ -6,6 +6,7 @@ export const defaultModelInput: ModelInput = {
   marbleMass_g: 13,
 
   targetReleaseToImpactTime_s: 0.451524,
+  targetReleaseToImpactTimeTolerance_s: 0.005,
   targetNormalImpactSpeed_mps: 2.426,
 
   rampAngle_rad: degToRad(-30),
@@ -25,6 +26,7 @@ export const defaultModelInput: ModelInput = {
   marbleDensity_kgpm3: 7850,
   rollingInertiaFactor_ratio: 5 / 7,
   staticFrictionCoefficient_ratio: 0.5,
+  kineticFrictionCoefficient_ratio: 0.4,
   minimumReliableRampAcceleration_mps2: 0.05,
   rampEnergyEfficiency_ratio: 0.95,
   impactRestitutionCoefficient_ratio: 0.7,

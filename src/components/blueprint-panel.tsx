@@ -211,6 +211,11 @@ function remainingBlueprintEntries(blueprint: Blueprint): BlueprintItem[] {
       blueprint.impactRestitutionCoefficient_ratio,
       ""
     ),
+    kineticFrictionCoefficient_ratio: formatScalarItem(
+      "Kinetic friction",
+      blueprint.kineticFrictionCoefficient_ratio,
+      ""
+    ),
     marbleDensity_kgpm3: formatScalarItem(
       "Marble density",
       blueprint.marbleDensity_kgpm3,

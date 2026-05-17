@@ -11,6 +11,7 @@ import { mToMm, sToMs } from "@/model/units"
 
 type ObservationViewProps = {
   observation: Observation | null
+  showTitle?: boolean
   title: string
 }
 
@@ -64,15 +65,15 @@ function boolTone(value: boolean | null): ObservationItem["tone"] {
   return value ? "ok" : "failed"
 }
 
-function errorTone(
-  error: number | null,
-  acceptableAbsoluteError: number
+function deviationTone(
+  deviation: number | null,
+  acceptableAbsoluteDeviation: number
 ): ObservationItem["tone"] {
-  if (error === null) {
+  if (deviation === null) {
     return "pending"
   }
 
-  return Math.abs(error) <= acceptableAbsoluteError ? "ok" : "failed"
+  return Math.abs(deviation) <= acceptableAbsoluteDeviation ? "ok" : "failed"
 }
 
 function valueToneClass(tone: ObservationItem["tone"]) {
@@ -149,14 +150,18 @@ function SnapshotRows({ items }: { items: SnapshotItem[] }) {
   )
 }
 
-export function ObservationView({ observation, title }: ObservationViewProps) {
+export function ObservationView({
+  observation,
+  showTitle = true,
+  title,
+}: ObservationViewProps) {
   if (observation === null) {
     return <p className="text-muted-foreground">{title} pending</p>
   }
 
   return (
     <FieldSet>
-      <FieldLegend>{title}</FieldLegend>
+      {showTitle ? <FieldLegend>{title}</FieldLegend> : null}
       {observation.invalidReason ? (
         <FieldDescription>{observation.invalidReason}</FieldDescription>
       ) : null}
@@ -167,23 +172,23 @@ export function ObservationView({ observation, title }: ObservationViewProps) {
             value: observation.valid ? "valid" : "invalid",
           },
           {
-            label: "Timing error",
+            label: "Timing deviation",
             value: formatNullableTime_s(
-              observation.checks.targetReleaseToImpactTimeError_s
+              observation.checks.targetReleaseToImpactTimeDeviation_s
             ),
-            tone: errorTone(
-              observation.checks.targetReleaseToImpactTimeError_s,
+            tone: deviationTone(
+              observation.checks.targetReleaseToImpactTimeDeviation_s,
               0.001
             ),
             emphasis: "target",
           },
           {
-            label: "Impact speed error",
+            label: "Impact speed deviation",
             value: formatNullableSpeed_mps(
-              observation.checks.targetNormalImpactSpeedError_mps
+              observation.checks.targetNormalImpactSpeedDeviation_mps
             ),
-            tone: errorTone(
-              observation.checks.targetNormalImpactSpeedError_mps,
+            tone: deviationTone(
+              observation.checks.targetNormalImpactSpeedDeviation_mps,
               0.01
             ),
             emphasis: "target",

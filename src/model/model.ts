@@ -9,6 +9,7 @@ export type ModelInput = {
   marbleMass_g: number
 
   targetReleaseToImpactTime_s: number
+  targetReleaseToImpactTimeTolerance_s: number
   targetNormalImpactSpeed_mps: number
 
   rampAngle_rad: number
@@ -28,6 +29,7 @@ export type ModelInput = {
   marbleDensity_kgpm3: number
   rollingInertiaFactor_ratio: number
   staticFrictionCoefficient_ratio: number
+  kineticFrictionCoefficient_ratio: number
   minimumReliableRampAcceleration_mps2: number
   rampEnergyEfficiency_ratio: number
   impactRestitutionCoefficient_ratio: number
@@ -57,6 +59,7 @@ export type Blueprint = {
   marbleDensity_kgpm3: BlueprintValue
   rollingInertiaFactor_ratio: BlueprintValue
   staticFrictionCoefficient_ratio: BlueprintValue
+  kineticFrictionCoefficient_ratio: BlueprintValue
   minimumReliableRampAcceleration_mps2: BlueprintValue
   rampEnergyEfficiency_ratio: BlueprintValue
   impactRestitutionCoefficient_ratio: BlueprintValue
@@ -81,8 +84,8 @@ export type Snapshot = {
 export type ObservationChecks = {
   ballisticsImpactFound: boolean | null
   contactMovingIntoDrumOk: boolean | null
-  targetNormalImpactSpeedError_mps: number | null
-  targetReleaseToImpactTimeError_s: number | null
+  targetNormalImpactSpeedDeviation_mps: number | null
+  targetReleaseToImpactTimeDeviation_s: number | null
   rampReliableAccelerationOk: boolean | null
   rampRequiredStaticFrictionCoefficient_ratio: number | null
   rampStaticFrictionOk: boolean | null
@@ -99,9 +102,39 @@ export type Observation = {
   bounceSnapshot: Snapshot
 }
 
+export type BooleanCheckAggregate = {
+  checkedCount: number
+  failedCount: number
+}
+
+export type NumericCheckAggregate = {
+  count: number
+  meanAbsolute: number
+  min: number
+  max: number
+  signedMean: number
+  varianceAccumulator: number
+}
+
+export type ObservationCheckAggregate = {
+  observationCount: number
+  invalidCount: number
+  ballisticsImpactFound: BooleanCheckAggregate
+  contactMovingIntoDrumOk: BooleanCheckAggregate
+  rampReliableAccelerationOk: BooleanCheckAggregate
+  rampStaticFrictionOk: BooleanCheckAggregate
+  targetNormalImpactSpeedDeviation_mps: NumericCheckAggregate
+  targetReleaseToImpactTimeDeviation_s: NumericCheckAggregate
+}
+
 export type ObservationAggregate = {
   completedRuns: number
   requestedRuns: number
   nominalObservation: Observation | null
+  earliestTimingObservation: Observation | null
+  latestTimingObservation: Observation | null
+  quietestImpactObservation: Observation | null
+  loudestImpactObservation: Observation | null
+  checkAggregate: ObservationCheckAggregate
   samples: Observation[]
 }

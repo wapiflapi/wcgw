@@ -44,6 +44,7 @@ export function App() {
           <ObservationsPanel
             blueprint={blueprint}
             observations={observations}
+            timingTolerance_s={modelInput.targetReleaseToImpactTimeTolerance_s}
           />
         </section>
       </main>
