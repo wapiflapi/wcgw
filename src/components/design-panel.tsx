@@ -575,7 +575,7 @@ export function DesignPanel({
                   modelInput.drumComplianceFactorTolerance_ratio,
                   2
                 )}
-                toleranceWhy="Snare head flex and tension are very uncertain, so this gets a deliberately wide range."
+                toleranceWhy="Use this as the calibration spread for a tuned drum, not as a range across possible drum heads."
                 onValueChange={(factor) => {
                   updateInput("drumComplianceFactor_ratio", factor)
                 }}
@@ -596,7 +596,7 @@ export function DesignPanel({
                   modelInput.spinTransferEfficiencyTolerance_ratio,
                   2
                 )}
-                toleranceWhy="Spin transfer through a short hit on a vibrating membrane is hard to estimate without measuring it."
+                toleranceWhy="Use this as the expected repeatability after tuning this drum's impact response."
                 onValueChange={(efficiency) => {
                   updateInput("spinTransferEfficiency_ratio", efficiency)
                 }}
@@ -623,7 +623,7 @@ export function DesignPanel({
                   modelInput.impactRestitutionCoefficientTolerance_ratio,
                   2
                 )}
-                toleranceWhy="A steel marble on a flexible drum head can bounce very differently depending on head tension and impact speed."
+                toleranceWhy="Use this as variation around a measured or tuned bounce response for this drum."
                 onValueChange={(coefficient) => {
                   updateInput("impactRestitutionCoefficient_ratio", coefficient)
                 }}
@@ -650,7 +650,7 @@ export function DesignPanel({
                   modelInput.impactFrictionCoefficientTolerance_ratio,
                   2
                 )}
-                toleranceWhy="Impact friction on a moving drum membrane is a guesstimate, not a stable material table value."
+                toleranceWhy="Use this as variation around a measured or tuned tangential response for this drum."
                 onValueChange={(coefficient) => {
                   updateInput("impactFrictionCoefficient_ratio", coefficient)
                 }}
