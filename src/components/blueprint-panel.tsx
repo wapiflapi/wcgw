@@ -40,7 +40,7 @@ const MAIN_BLUEPRINT_KEYS = new Set<keyof Blueprint>([
 ])
 
 function hasRange(value: BlueprintValue) {
-  return value.min !== value.nominal || value.max !== value.nominal
+  return value.toleranceMinus !== 0 || value.tolerancePlus !== 0
 }
 
 function formatBlueprintNominal(
@@ -61,8 +61,14 @@ function formatBlueprintTolerance(
   if (!hasRange(value)) {
     return undefined
   }
-  const minus = transform(value.nominal) - transform(value.min)
-  const plus = transform(value.max) - transform(value.nominal)
+  const minus = Math.abs(
+    transform(value.nominal) -
+      transform(value.nominal - value.toleranceMinus)
+  )
+  const plus = Math.abs(
+    transform(value.nominal + value.tolerancePlus) -
+      transform(value.nominal)
+  )
   const formattedMinus = formatNumber(minus, digits)
   const formattedPlus = formatNumber(plus, digits)
 

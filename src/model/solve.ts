@@ -1,9 +1,4 @@
-import type {
-  Blueprint,
-  BlueprintValue,
-  InputValue,
-  ModelInput,
-} from "@/model/model"
+import type { Blueprint, BlueprintValue, ModelInput } from "@/model/model"
 import { dotVector2, scaleVector2, subtractVector2 } from "@/lib/math"
 
 type RampLaunchGeometry = {
@@ -20,17 +15,17 @@ type DrumGeometry = {
 
 function blueprintSolvedValue(nominal: number, tolerance = 0): BlueprintValue {
   return {
-    max: nominal + tolerance,
-    min: nominal - tolerance,
     nominal,
+    toleranceMinus: tolerance,
+    tolerancePlus: tolerance,
   }
 }
 
-function blueprintValue(input: InputValue): BlueprintValue {
+function blueprintValue(nominal: number): BlueprintValue {
   return {
-    nominal: input.nominal,
-    min: input.nominal - input.toleranceMinus,
-    max: input.nominal + input.tolerancePlus,
+    nominal,
+    toleranceMinus: 0,
+    tolerancePlus: 0,
   }
 }
 
@@ -38,7 +33,7 @@ function solveDrumGeometry(input: ModelInput): DrumGeometry {
   // For the blueprint solve, impact is the marble center at the origin.
   // Pivot geometry belongs to the simulation stage.
   return {
-    drumTiltAngle_rad: input.drumTiltAngle_rad.nominal,
+    drumTiltAngle_rad: input.drumTiltAngle_rad,
     impactPoint_x_m: 0,
     impactPoint_y_m: 0,
   }
@@ -49,23 +44,22 @@ function solveRampLaunchGeometry(
   drumGeometry: DrumGeometry
 ): RampLaunchGeometry {
   // Ramp angle, measured from horizontal, positive counterclockwise.
-  const rampAngle_rad = input.rampAngle_rad.nominal
+  const rampAngle_rad = input.rampAngle_rad
 
   // Ramp energy efficiency, where 1 means no rolling loss.
-  const rampEnergyEfficiency_ratio = input.rampEnergyEfficiency_ratio.nominal
+  const rampEnergyEfficiency_ratio = input.rampEnergyEfficiency_ratio
 
   // Rolling acceleration factor, e.g. 5/7 for a solid sphere.
-  const rollingAccelerationFactor_ratio =
-    input.rollingInertiaFactor_ratio.nominal
+  const rollingAccelerationFactor_ratio = input.rollingInertiaFactor_ratio
 
   // Gravity magnitude.
-  const gravity_mps2 = input.gravity_mps2.nominal
+  const gravity_mps2 = input.gravity_mps2
 
   // Target total time from release to impact.
-  const totalTime_s = input.targetReleaseToImpactTime_s.nominal
+  const totalTime_s = input.targetReleaseToImpactTime_s
 
   // Target impact speed along the drum normal.
-  const targetNormalImpactSpeed_mps = input.targetNormalImpactSpeed_mps.nominal
+  const targetNormalImpactSpeed_mps = input.targetNormalImpactSpeed_mps
 
   // Impact position of the marble center for the blueprint solve.
   const impactPoint_m = {
@@ -164,13 +158,13 @@ export function solveBlueprint(input: ModelInput): Blueprint {
   const drumGeometry = solveDrumGeometry(input)
   const rampLaunchGeometry = solveRampLaunchGeometry(input, drumGeometry)
   const manufacturingPositionTolerance_m = Math.abs(
-    input.manufacturingPositionTolerance_m.nominal
+    input.manufacturingPositionTolerance_m
   )
   const manufacturingLinearTolerance_m = Math.abs(
-    input.manufacturingLinearTolerance_m.nominal
+    input.manufacturingLinearTolerance_m
   )
   const manufacturingAngleTolerance_rad = Math.abs(
-    input.manufacturingAngleTolerance_rad.nominal
+    input.manufacturingAngleTolerance_rad
   )
 
   return {
@@ -185,7 +179,7 @@ export function solveBlueprint(input: ModelInput): Blueprint {
     ),
 
     rampAngle_rad: blueprintSolvedValue(
-      input.rampAngle_rad.nominal,
+      input.rampAngle_rad,
       manufacturingAngleTolerance_rad
     ),
     rampLength_m: blueprintSolvedValue(
@@ -209,15 +203,15 @@ export function solveBlueprint(input: ModelInput): Blueprint {
       manufacturingPositionTolerance_m
     ),
     drumTiltAngle_rad: blueprintSolvedValue(
-      input.drumTiltAngle_rad.nominal,
+      input.drumTiltAngle_rad,
       manufacturingAngleTolerance_rad
     ),
     drumPivotArmLength_m: blueprintSolvedValue(
-      input.drumPivotArmLength_m.nominal,
+      input.drumPivotArmLength_m,
       manufacturingLinearTolerance_m
     ),
     drumPivotAngle_rad: blueprintSolvedValue(
-      input.drumPivotAngle_rad.nominal,
+      input.drumPivotAngle_rad,
       manufacturingAngleTolerance_rad
     ),
 

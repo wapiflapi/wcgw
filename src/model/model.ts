@@ -1,44 +1,38 @@
-export type InputValue = {
+export type BlueprintValue = {
   nominal: number
   tolerancePlus: number
   toleranceMinus: number
 }
 
-export type BlueprintValue = {
-  nominal: number
-  min: number
-  max: number
-}
-
 export type ModelInput = {
-  marbleDiameter_m: InputValue
-  marbleMass_g: InputValue
+  marbleDiameter_m: number
+  marbleMass_g: number
 
-  targetReleaseToImpactTime_s: InputValue
-  targetNormalImpactSpeed_mps: InputValue
+  targetReleaseToImpactTime_s: number
+  targetNormalImpactSpeed_mps: number
 
-  rampAngle_rad: InputValue
-  rampLength_m: InputValue
-  releasePoint_x_m: InputValue
-  releasePoint_y_m: InputValue
-  impactPoint_x_m: InputValue
-  impactPoint_y_m: InputValue
-  drumTiltAngle_rad: InputValue
-  drumPivotArmLength_m: InputValue
-  drumPivotAngle_rad: InputValue
-  manufacturingPositionTolerance_m: InputValue
-  manufacturingLinearTolerance_m: InputValue
-  manufacturingAngleTolerance_rad: InputValue
+  rampAngle_rad: number
+  rampLength_m: number
+  releasePoint_x_m: number
+  releasePoint_y_m: number
+  impactPoint_x_m: number
+  impactPoint_y_m: number
+  drumTiltAngle_rad: number
+  drumPivotArmLength_m: number
+  drumPivotAngle_rad: number
+  manufacturingPositionTolerance_m: number
+  manufacturingLinearTolerance_m: number
+  manufacturingAngleTolerance_rad: number
 
-  gravity_mps2: InputValue
-  marbleDensity_kgpm3: InputValue
-  rollingInertiaFactor_ratio: InputValue
-  staticFrictionCoefficient_ratio: InputValue
-  rampEnergyEfficiency_ratio: InputValue
-  impactRestitutionCoefficient_ratio: InputValue
-  impactFrictionCoefficient_ratio: InputValue
-  spinTransferEfficiency_ratio: InputValue
-  drumComplianceFactor_ratio: InputValue
+  gravity_mps2: number
+  marbleDensity_kgpm3: number
+  rollingInertiaFactor_ratio: number
+  staticFrictionCoefficient_ratio: number
+  rampEnergyEfficiency_ratio: number
+  impactRestitutionCoefficient_ratio: number
+  impactFrictionCoefficient_ratio: number
+  spinTransferEfficiency_ratio: number
+  drumComplianceFactor_ratio: number
 }
 
 export type Blueprint = {

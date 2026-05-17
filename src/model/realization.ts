@@ -14,7 +14,9 @@ export function sampleBlueprintRealization(
   return Object.fromEntries(
     Object.entries(blueprint).map(([key, value]) => [
       key,
-      value.min + Math.random() * (value.max - value.min),
+      value.nominal -
+        value.toleranceMinus +
+        Math.random() * (value.toleranceMinus + value.tolerancePlus),
     ])
   ) as BlueprintRealization
 }

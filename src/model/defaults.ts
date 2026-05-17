@@ -1,41 +1,33 @@
-import type { InputValue, ModelInput } from "@/model/model"
+import type { ModelInput } from "@/model/model"
 import { degToRad } from "@/model/units"
 
-function inputValue(nominal: number): InputValue {
-  return {
-    nominal,
-    toleranceMinus: 0,
-    tolerancePlus: 0,
-  }
-}
-
 export const defaultModelInput: ModelInput = {
-  marbleDiameter_m: inputValue(0.015),
-  marbleMass_g: inputValue(13),
+  marbleDiameter_m: 0.015,
+  marbleMass_g: 13,
 
-  targetReleaseToImpactTime_s: inputValue(0.451524),
-  targetNormalImpactSpeed_mps: inputValue(2.426),
+  targetReleaseToImpactTime_s: 0.451524,
+  targetNormalImpactSpeed_mps: 2.426,
 
-  rampAngle_rad: inputValue(degToRad(-30)),
-  rampLength_m: inputValue(1),
-  releasePoint_x_m: inputValue(0),
-  releasePoint_y_m: inputValue(0),
-  impactPoint_x_m: inputValue(0),
-  impactPoint_y_m: inputValue(0),
-  drumTiltAngle_rad: inputValue(0),
-  drumPivotArmLength_m: inputValue(0.5),
-  drumPivotAngle_rad: inputValue(0),
-  manufacturingPositionTolerance_m: inputValue(0.005),
-  manufacturingLinearTolerance_m: inputValue(0.0005),
-  manufacturingAngleTolerance_rad: inputValue(degToRad(1)),
+  rampAngle_rad: degToRad(-30),
+  rampLength_m: 1,
+  releasePoint_x_m: 0,
+  releasePoint_y_m: 0,
+  impactPoint_x_m: 0,
+  impactPoint_y_m: 0,
+  drumTiltAngle_rad: 0,
+  drumPivotArmLength_m: 0.5,
+  drumPivotAngle_rad: 0,
+  manufacturingPositionTolerance_m: 0.005,
+  manufacturingLinearTolerance_m: 0.0005,
+  manufacturingAngleTolerance_rad: degToRad(1),
 
-  gravity_mps2: inputValue(9.81),
-  marbleDensity_kgpm3: inputValue(7850),
-  rollingInertiaFactor_ratio: inputValue(5 / 7),
-  staticFrictionCoefficient_ratio: inputValue(0.5),
-  rampEnergyEfficiency_ratio: inputValue(0.95),
-  impactRestitutionCoefficient_ratio: inputValue(0.7),
-  impactFrictionCoefficient_ratio: inputValue(0.3),
-  spinTransferEfficiency_ratio: inputValue(0.5),
-  drumComplianceFactor_ratio: inputValue(1),
+  gravity_mps2: 9.81,
+  marbleDensity_kgpm3: 7850,
+  rollingInertiaFactor_ratio: 5 / 7,
+  staticFrictionCoefficient_ratio: 0.5,
+  rampEnergyEfficiency_ratio: 0.95,
+  impactRestitutionCoefficient_ratio: 0.7,
+  impactFrictionCoefficient_ratio: 0.3,
+  spinTransferEfficiency_ratio: 0.5,
+  drumComplianceFactor_ratio: 1,
 }
