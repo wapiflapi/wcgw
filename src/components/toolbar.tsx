@@ -1,8 +1,29 @@
-import { Info, Moon, Sun, SunHorizon } from "@phosphor-icons/react"
+import { useState } from "react"
+import {
+  ArrowCounterClockwise,
+  Copy,
+  Info,
+  Moon,
+  ShareNetwork,
+  Sun,
+  SunHorizon,
+} from "@phosphor-icons/react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { useTheme } from "@/components/theme-provider"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 import {
   Popover,
   PopoverContent,
@@ -13,6 +34,10 @@ import {
 } from "@/components/ui/popover"
 
 type Theme = "dark" | "light" | "system"
+
+type ToolbarProps = {
+  onResetModelInput: () => void
+}
 
 function getNextTheme(theme: Theme) {
   if (theme === "light") {
@@ -46,7 +71,8 @@ function ThemeIcon({ theme }: { theme: Theme }) {
   return <Moon size={16} />
 }
 
-export function Toolbar() {
+export function Toolbar({ onResetModelInput }: ToolbarProps) {
+  const [shareUrl, setShareUrl] = useState("")
   const { setTheme, theme } = useTheme()
 
   function cycleTheme() {
@@ -56,8 +82,94 @@ export function Toolbar() {
     toast(getThemeMessage(nextTheme))
   }
 
+  function updateShareUrl() {
+    setShareUrl(window.location.href)
+  }
+
+  async function copyShareUrl() {
+    const url = shareUrl || window.location.href
+
+    try {
+      await navigator.clipboard.writeText(url)
+      toast("Share URL copied")
+    } catch {
+      toast("Could not copy URL")
+    }
+  }
+
   return (
     <div className="flex items-center justify-end border-b bg-background">
+      <AlertDialog>
+        <AlertDialogTrigger
+          render={
+            <Button
+              aria-label="Back to defaults"
+              size="icon"
+              variant="ghost"
+            />
+          }
+        >
+          <ArrowCounterClockwise size={16} />
+        </AlertDialogTrigger>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Back to defaults?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will reset every input and clear the share URL for the
+              current model.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              render={<Button variant="ghost" />}
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={onResetModelInput}
+              render={<Button variant="destructive" />}
+            >
+              Reset
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <Popover>
+        <PopoverTrigger
+          render={
+            <Button
+              aria-label="Share model"
+              onClick={updateShareUrl}
+              size="icon"
+              variant="ghost"
+            />
+          }
+        >
+          <ShareNetwork size={16} />
+        </PopoverTrigger>
+        <PopoverContent
+          align="end"
+          className="w-[min(calc(100vw-2rem),28rem)]"
+        >
+          <PopoverHeader>
+            <PopoverTitle>Share model</PopoverTitle>
+            <PopoverDescription>
+              Copy this URL to reopen the current inputs.
+            </PopoverDescription>
+          </PopoverHeader>
+          <div className="flex gap-2">
+            <Input
+              readOnly
+              aria-label="Share URL"
+              value={shareUrl || window.location.href}
+            />
+            <Button onClick={copyShareUrl} variant="secondary">
+              <Copy size={16} />
+              Copy
+            </Button>
+          </div>
+        </PopoverContent>
+      </Popover>
       <Button
         aria-label="Toggle theme"
         onClick={cycleTheme}

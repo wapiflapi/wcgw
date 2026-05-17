@@ -29,7 +29,7 @@ import {
 } from "@/model/free-fall"
 import { getSphereMass_g, isMassWithinRelativeTolerance } from "@/model/marble"
 import type { ModelInput } from "@/model/model"
-import { degToRad, mToMm, mmToM, msToS, radToDeg, sToMs } from "@/model/units"
+import { degToModelRad, mToMm, mmToM, msToS, radToDeg, sToMs } from "@/model/units"
 
 type DesignPanelProps = {
   modelInput: ModelInput
@@ -355,7 +355,7 @@ export function DesignPanel({
               step={1}
               inverted
               onChange={(angle_deg) => {
-                updateInput("rampAngle_rad", degToRad(angle_deg))
+                updateInput("rampAngle_rad", degToModelRad(angle_deg))
               }}
             />
           </FieldSet>
@@ -376,7 +376,7 @@ export function DesignPanel({
               step={0.1}
               inverted
               onChange={(angle_deg) => {
-                updateInput("drumTiltAngle_rad", degToRad(angle_deg))
+                updateInput("drumTiltAngle_rad", degToModelRad(angle_deg))
               }}
             />
           </FieldSet>
@@ -401,7 +401,10 @@ export function DesignPanel({
                 max={90}
                 step={1}
                 onChange={(angle_deg) => {
-                  updateInput("drumPivotAngleRange_rad", degToRad(angle_deg))
+                  updateInput(
+                    "drumPivotAngleRange_rad",
+                    degToModelRad(angle_deg)
+                  )
                 }}
               />
               <SliderField
@@ -502,7 +505,7 @@ export function DesignPanel({
                 onChange={(tolerance_deg) => {
                   updateInput(
                     "manufacturingAngleTolerance_rad",
-                    degToRad(tolerance_deg)
+                    degToModelRad(tolerance_deg)
                   )
                 }}
               />

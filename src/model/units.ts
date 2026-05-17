@@ -2,6 +2,10 @@ export function degToRad(deg: number) {
   return deg * (Math.PI / 180)
 }
 
+export function degToModelRad(deg: number) {
+  return Number(degToRad(deg).toFixed(3))
+}
+
 export function radToDeg(rad: number) {
   return rad * (180 / Math.PI)
 }

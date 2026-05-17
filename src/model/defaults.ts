@@ -1,5 +1,5 @@
 import type { ModelInput } from "@/model/model"
-import { degToRad } from "@/model/units"
+import { degToModelRad } from "@/model/units"
 
 export const defaultModelInput: ModelInput = {
   marbleDiameter_m: 0.015,
@@ -9,18 +9,18 @@ export const defaultModelInput: ModelInput = {
   targetReleaseToImpactTimeTolerance_s: 0.005,
   targetNormalImpactSpeed_mps: 2.426,
 
-  rampAngle_rad: degToRad(-40),
+  rampAngle_rad: degToModelRad(-40),
   rampLength_m: 1,
   releasePoint_x_m: 0,
   releasePoint_y_m: 0,
   impactPoint_x_m: 0,
   impactPoint_y_m: 0,
-  drumTiltAngle_rad: degToRad(-10),
+  drumTiltAngle_rad: degToModelRad(-10),
   drumPivotArmLength_m: 0.5,
-  drumPivotAngleRange_rad: degToRad(5),
+  drumPivotAngleRange_rad: degToModelRad(5),
   manufacturingPositionTolerance_m: 0.005,
   manufacturingLinearTolerance_m: 0.0005,
-  manufacturingAngleTolerance_rad: degToRad(1),
+  manufacturingAngleTolerance_rad: degToModelRad(1),
 
   gravity_mps2: 9.81,
   marbleDensity_kgpm3: 7850,

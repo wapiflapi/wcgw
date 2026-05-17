@@ -1,12 +1,11 @@
-import { useState } from "react"
-
 import { DesignPanel } from "@/components/design-panel"
 import { ObservationsPanel } from "@/components/observations-panel"
 import { SchematicPanel } from "@/components/schematic-panel"
+import { Toolbar } from "@/components/toolbar"
 import { Toaster } from "@/components/ui/sonner"
 import { usePipeline } from "@/hooks/use-pipeline"
+import { useUrlModelInput } from "@/hooks/use-url-model-input"
 import { defaultModelInput } from "@/model/defaults"
-import type { ModelInput } from "@/model/model"
 import type { PipelineRunOptions } from "@/workers/pipeline.worker"
 
 const PIPELINE_RUN_OPTIONS: PipelineRunOptions = {
@@ -18,7 +17,7 @@ const PIPELINE_RUN_OPTIONS: PipelineRunOptions = {
 }
 
 export function App() {
-  const [modelInput, setModelInput] = useState<ModelInput>(defaultModelInput)
+  const [modelInput, setModelInput] = useUrlModelInput()
   const { blueprint, observations, observationsStale } = usePipeline(
     modelInput,
     PIPELINE_RUN_OPTIONS
@@ -33,7 +32,12 @@ export function App() {
             onModelInputChange={setModelInput}
           />
         </section>
-        <section className="p-4 sm:col-start-2 sm:row-start-1 lg:col-start-2 lg:row-start-1">
+        <section className="grid min-h-[420px] min-w-0 grid-rows-[2rem_minmax(0,1fr)] p-4 sm:col-start-2 sm:row-start-1 sm:h-full sm:min-h-0 lg:col-start-2 lg:row-start-1">
+          <Toolbar
+            onResetModelInput={() => {
+              setModelInput(defaultModelInput)
+            }}
+          />
           <SchematicPanel
             blueprint={blueprint}
             nominalObservation={observations?.nominalObservation ?? null}

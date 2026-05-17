@@ -1,5 +1,4 @@
 import { SchematicBoard } from "@/components/schematic-board"
-import { Toolbar } from "@/components/toolbar"
 import type { Blueprint, Observation } from "@/model/model"
 
 type SchematicPanelProps = {
@@ -16,16 +15,13 @@ export function SchematicPanel({
   sampledObservations,
 }: SchematicPanelProps) {
   return (
-    <section className="grid min-h-[420px] min-w-0 grid-rows-[2rem_minmax(0,1fr)] sm:h-full sm:min-h-0">
-      <Toolbar />
-      <div className="min-h-0 min-w-0 overflow-auto p-4 sm:max-h-[600px]">
-        <SchematicBoard
-          blueprint={blueprint}
-          nominalObservation={nominalObservation}
-          nominalObservationStale={nominalObservationStale}
-          sampledObservations={sampledObservations}
-        />
-      </div>
-    </section>
+    <div className="min-h-0 min-w-0 overflow-auto p-4 sm:max-h-[600px]">
+      <SchematicBoard
+        blueprint={blueprint}
+        nominalObservation={nominalObservation}
+        nominalObservationStale={nominalObservationStale}
+        sampledObservations={sampledObservations}
+      />
+    </div>
   )
 }
