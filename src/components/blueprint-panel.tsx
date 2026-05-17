@@ -30,8 +30,7 @@ const MAIN_BLUEPRINT_KEYS = new Set<keyof Blueprint>([
   "releasePoint_y_m",
   "impactPoint_x_m",
   "impactPoint_y_m",
-  "drumSurfaceAngle_rad",
-  "drumPivotAngle_rad",
+  "drumTiltAngle_rad",
 ])
 
 function hasRange(value: BlueprintValue) {
@@ -113,18 +112,9 @@ function blueprintEntries(blueprint: Blueprint): BlueprintItem[] {
       value: formatPoint(blueprint.impactPoint_x_m, blueprint.impactPoint_y_m),
     },
     {
-      label: "Drum angle",
+      label: "Drum tilt angle",
       value: formatBlueprintValue(
-        blueprint.drumSurfaceAngle_rad,
-        "deg",
-        radToDeg,
-        1
-      ),
-    },
-    {
-      label: "Drum pivot angle",
-      value: formatBlueprintValue(
-        blueprint.drumPivotAngle_rad,
+        blueprint.drumTiltAngle_rad,
         "deg",
         radToDeg,
         1
@@ -155,13 +145,9 @@ function remainingBlueprintEntries(blueprint: Blueprint): BlueprintItem[] {
       label: "Drum pivot Y",
       value: formatBlueprintValue(blueprint.drumPivotPoint_y_m, "mm", mToMm, 0),
     },
-    drumSurfaceAngle_rad: {
-      label: "Drum surface angle",
-      value: formatBlueprintValue(
-        blueprint.drumSurfaceAngle_rad,
-        "deg",
-        radToDeg
-      ),
+    drumTiltAngle_rad: {
+      label: "Drum tilt angle",
+      value: formatBlueprintValue(blueprint.drumTiltAngle_rad, "deg", radToDeg),
     },
     gravity_mps2: {
       label: "Gravity",

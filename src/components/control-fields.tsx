@@ -27,7 +27,22 @@ type SliderFieldProps = {
   min: number
   max: number
   step: number
+  inverted?: boolean
   onChange: (value: number) => void
+}
+
+function getNumberStep(value: string) {
+  const numericValue = Math.abs(Number(value))
+
+  if (!Number.isFinite(numericValue) || numericValue < 10) {
+    return 0.01
+  }
+
+  if (numericValue < 50) {
+    return 1
+  }
+
+  return 10 ** Math.max(1, Math.floor(Math.log10(numericValue)) - 1)
 }
 
 export function NumberField({
@@ -41,6 +56,7 @@ export function NumberField({
   const [isEditing, setIsEditing] = useState(false)
   const [draftValue, setDraftValue] = useState("")
   const inputValue = isEditing ? draftValue : (value ?? defaultValue ?? "")
+  const step = getNumberStep(inputValue)
 
   return (
     <Field>
@@ -50,6 +66,7 @@ export function NumberField({
           id={id}
           type="number"
           inputMode="decimal"
+          step={step}
           value={inputValue}
           onBlur={() => {
             setIsEditing(false)
@@ -112,9 +129,11 @@ export function SliderField({
   min,
   max,
   step,
+  inverted = false,
   onChange,
 }: SliderFieldProps) {
   const digits = step < 1 ? 1 : 0
+  const sliderValue = inverted ? max + min - value : value
 
   return (
     <Field>
@@ -129,12 +148,16 @@ export function SliderField({
         />
       </SliderHeader>
       <Slider
-        value={[value]}
+        value={[sliderValue]}
         min={min}
         max={max}
         step={step}
         onValueChange={(nextValue) => {
-          onChange(Array.isArray(nextValue) ? (nextValue[0] ?? min) : nextValue)
+          const rawValue = Array.isArray(nextValue)
+            ? (nextValue[0] ?? min)
+            : nextValue
+
+          onChange(inverted ? max + min - rawValue : rawValue)
         }}
       />
     </Field>

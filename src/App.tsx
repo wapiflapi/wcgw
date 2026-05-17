@@ -33,7 +33,7 @@ export function App() {
           />
         </section>
         <section className="p-4 sm:col-start-2 sm:row-start-1 lg:col-start-2 lg:row-start-1">
-          <SchematicPanel />
+          <SchematicPanel blueprint={blueprint} />
         </section>
         <section className="p-4 sm:col-start-2 sm:row-start-2 lg:col-start-3 lg:row-start-1">
           <ObservationsPanel

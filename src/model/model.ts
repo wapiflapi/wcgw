@@ -23,7 +23,7 @@ export type ModelInput = {
   releasePoint_y_m: InputValue
   impactPoint_x_m: InputValue
   impactPoint_y_m: InputValue
-  drumSurfaceAngle_rad: InputValue
+  drumTiltAngle_rad: InputValue
   drumPivotPoint_x_m: InputValue
   drumPivotPoint_y_m: InputValue
   drumPivotAngle_rad: InputValue
@@ -52,7 +52,7 @@ export type Blueprint = {
   releasePoint_y_m: BlueprintValue
   impactPoint_x_m: BlueprintValue
   impactPoint_y_m: BlueprintValue
-  drumSurfaceAngle_rad: BlueprintValue
+  drumTiltAngle_rad: BlueprintValue
   drumPivotPoint_x_m: BlueprintValue
   drumPivotPoint_y_m: BlueprintValue
   drumPivotAngle_rad: BlueprintValue

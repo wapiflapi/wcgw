@@ -216,9 +216,10 @@ export function DesignPanel({
               label="Ramp angle"
               unit="deg"
               value={radToDeg(modelInput.rampAngle_rad.nominal)}
-              min={0}
-              max={60}
+              min={-60}
+              max={0}
               step={1}
+              inverted
               onChange={(angle_deg) => {
                 updateNominal("rampAngle_rad", degToRad(angle_deg))
               }}
@@ -227,27 +228,37 @@ export function DesignPanel({
 
           <FieldSet>
             <FieldLegend>Drum</FieldLegend>
+            <SliderField
+              id="drumTiltAngle_deg"
+              label="Tilt angle"
+              unit="deg"
+              value={radToDeg(modelInput.drumTiltAngle_rad.nominal)}
+              min={-45}
+              max={0}
+              step={0.1}
+              inverted
+              onChange={(angle_deg) => {
+                updateNominal("drumTiltAngle_rad", degToRad(angle_deg))
+              }}
+            />
+          </FieldSet>
+        </FieldGroup>
+      </TabsContent>
+
+      <TabsContent value="simulation">
+        <FieldGroup className="gap-4">
+          <FieldSet>
+            <FieldLegend>Drum Pivot</FieldLegend>
             <FieldGroup>
-              <SliderField
-                id="drumSurfaceAngle_deg"
-                label="Surface angle"
-                unit="deg"
-                value={radToDeg(modelInput.drumSurfaceAngle_rad.nominal)}
-                min={-45}
-                max={45}
-                step={0.1}
-                onChange={(angle_deg) => {
-                  updateNominal("drumSurfaceAngle_rad", degToRad(angle_deg))
-                }}
-              />
               <SliderField
                 id="drumPivotAngle_deg"
                 label="Pivot angle"
                 unit="deg"
                 value={radToDeg(modelInput.drumPivotAngle_rad.nominal)}
                 min={-90}
-                max={90}
+                max={0}
                 step={1}
+                inverted
                 onChange={(angle_deg) => {
                   updateNominal("drumPivotAngle_rad", degToRad(angle_deg))
                 }}
@@ -280,11 +291,7 @@ export function DesignPanel({
               </FieldRowSm>
             </FieldGroup>
           </FieldSet>
-        </FieldGroup>
-      </TabsContent>
 
-      <TabsContent value="simulation">
-        <FieldGroup className="gap-4">
           <FieldSet>
             <FieldLegend>Friction & Losses</FieldLegend>
             <FieldRow>
