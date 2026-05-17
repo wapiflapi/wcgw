@@ -39,7 +39,7 @@ export type PipelineWorkerApi = {
 export type PipelineRunOptions = {
   cancellationCheckEvery: number
   observationRequestedRuns: number
-  observationInitialCheckpoints: number[]
+  observationSampleFillCheckpointEvery: number
   observationRecurringCheckpointEvery: number
   observationRequestedSampleCount: number
 }
@@ -47,8 +47,13 @@ export type PipelineRunOptions = {
 let activeRunId = 0
 
 function isObservationCheckpoint(run: number, options: PipelineRunOptions) {
+  const shouldCheckpointWhileFillingSamples =
+    options.observationSampleFillCheckpointEvery > 0 &&
+    run <= options.observationRequestedSampleCount &&
+    run % options.observationSampleFillCheckpointEvery === 0
+
   return (
-    options.observationInitialCheckpoints.includes(run) ||
+    shouldCheckpointWhileFillingSamples ||
     run % options.observationRecurringCheckpointEvery === 0 ||
     run === options.observationRequestedRuns
   )
