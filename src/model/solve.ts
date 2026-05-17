@@ -220,15 +220,6 @@ export function solveBlueprint(input: ModelInput): Blueprint {
       input.drumPivotAngle_rad.nominal,
       manufacturingAngleTolerance_rad
     ),
-    manufacturingPositionTolerance_m: blueprintValue(
-      input.manufacturingPositionTolerance_m
-    ),
-    manufacturingLinearTolerance_m: blueprintValue(
-      input.manufacturingLinearTolerance_m
-    ),
-    manufacturingAngleTolerance_rad: blueprintValue(
-      input.manufacturingAngleTolerance_rad
-    ),
 
     gravity_mps2: blueprintValue(input.gravity_mps2),
     marbleDensity_kgpm3: blueprintValue(input.marbleDensity_kgpm3),

@@ -57,9 +57,6 @@ export type Blueprint = {
   drumTiltAngle_rad: BlueprintValue
   drumPivotArmLength_m: BlueprintValue
   drumPivotAngle_rad: BlueprintValue
-  manufacturingPositionTolerance_m: BlueprintValue
-  manufacturingLinearTolerance_m: BlueprintValue
-  manufacturingAngleTolerance_rad: BlueprintValue
 
   gravity_mps2: BlueprintValue
   marbleDensity_kgpm3: BlueprintValue
@@ -72,7 +69,26 @@ export type Blueprint = {
   drumComplianceFactor_ratio: BlueprintValue
 }
 
-export type Observation = Record<string, never>
+export type BlueprintRealization = {
+  [Key in keyof Blueprint]: number
+}
+
+export type Snapshot = {
+  marblePosition_x_m: number
+  marblePosition_y_m: number
+  marbleSpeed_x_mps: number
+  marbleSpeed_y_mps: number
+  marbleSpin_radps: number
+  time_s: number
+}
+
+export type Observation = {
+  blueprintRealization: BlueprintRealization
+  releaseSnapshot: Snapshot
+  dropSnapshot: Snapshot
+  impactSnapshot: Snapshot
+  bounceSnapshot: Snapshot
+}
 
 export type ObservationAggregate = {
   completedRuns: number

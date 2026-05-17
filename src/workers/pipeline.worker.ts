@@ -8,10 +8,13 @@ import {
 import {
   createObservationAggregate,
   reduceObservationAggregate,
-  runNominalObservation,
   runSimulationStep,
   setNominalObservation,
 } from "@/model/simulation"
+import {
+  createNominalBlueprintRealization,
+  sampleBlueprintRealization,
+} from "@/model/realization"
 import { solveBlueprint } from "@/model/solve"
 
 export type PipelineEvent =
@@ -81,9 +84,11 @@ const api: PipelineWorkerApi = {
 
     onEvent({ blueprint, type: "blueprint" })
 
+    const nominalRealization = createNominalBlueprintRealization(blueprint)
+
     observations = setNominalObservation(
       observations,
-      runNominalObservation(blueprint)
+      runSimulationStep(nominalRealization, 1)
     )
 
     onEvent({
@@ -98,7 +103,7 @@ const api: PipelineWorkerApi = {
 
       observations = reduceObservationAggregate(
         observations,
-        runSimulationStep(blueprint, run + 1),
+        runSimulationStep(sampleBlueprintRealization(blueprint), run + 1),
         options.observationRequestedSampleCount
       )
 

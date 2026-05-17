@@ -1,28 +1,79 @@
 import type {
-  Blueprint,
+  BlueprintRealization,
   Observation,
   ObservationAggregate,
+  Snapshot,
 } from "@/model/model"
 
-export function runSimulationStep(
-  _blueprint: Blueprint,
-  run: number
-): Observation {
-  let scratch = 0
+function simulateRelease(
+  _blueprintRealization: BlueprintRealization
+): Snapshot {
+  void _blueprintRealization
 
-  for (let x = 0; x < 10000; x += 1) {
-    scratch += Math.sin(x + run)
+  return {
+    marblePosition_x_m: 0,
+    marblePosition_y_m: 0,
+    marbleSpeed_x_mps: 0,
+    marbleSpeed_y_mps: 0,
+    marbleSpin_radps: 0,
+    time_s: 0,
   }
-
-  void scratch
-
-  return {}
 }
 
-export function runNominalObservation(_blueprint: Blueprint): Observation {
-  void _blueprint
+function simulateRampUntilDrop(
+  _blueprintRealization: BlueprintRealization,
+  releaseSnapshot: Snapshot
+): Snapshot {
+  void _blueprintRealization
 
-  return {}
+  return releaseSnapshot
+}
+
+function simulateBallisticsUntilImpact(
+  _blueprintRealization: BlueprintRealization,
+  dropSnapshot: Snapshot
+): Snapshot {
+  void _blueprintRealization
+
+  return dropSnapshot
+}
+
+function simulateContactUntilBounce(
+  _blueprintRealization: BlueprintRealization,
+  impactSnapshot: Snapshot
+): Snapshot {
+  void _blueprintRealization
+
+  return impactSnapshot
+}
+
+export function runSimulationStep(
+  blueprintRealization: BlueprintRealization,
+  _run: number
+): Observation {
+  void _run
+
+  const releaseSnapshot = simulateRelease(blueprintRealization)
+  const dropSnapshot = simulateRampUntilDrop(
+    blueprintRealization,
+    releaseSnapshot
+  )
+  const impactSnapshot = simulateBallisticsUntilImpact(
+    blueprintRealization,
+    dropSnapshot
+  )
+  const bounceSnapshot = simulateContactUntilBounce(
+    blueprintRealization,
+    impactSnapshot
+  )
+
+  return {
+    blueprintRealization,
+    releaseSnapshot,
+    dropSnapshot,
+    impactSnapshot,
+    bounceSnapshot,
+  }
 }
 
 export function createObservationAggregate(

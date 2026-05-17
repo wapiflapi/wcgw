@@ -226,26 +226,6 @@ function remainingBlueprintEntries(blueprint: Blueprint): BlueprintItem[] {
       undefined,
       1
     ),
-    manufacturingAngleTolerance_rad: formatScalarItem(
-      "Manufacturing angular tolerance",
-      blueprint.manufacturingAngleTolerance_rad,
-      "deg",
-      radToDeg
-    ),
-    manufacturingLinearTolerance_m: formatScalarItem(
-      "Manufacturing linear tolerance",
-      blueprint.manufacturingLinearTolerance_m,
-      "mm",
-      mToMm,
-      2
-    ),
-    manufacturingPositionTolerance_m: formatScalarItem(
-      "Manufacturing positional tolerance",
-      blueprint.manufacturingPositionTolerance_m,
-      "mm",
-      mToMm,
-      2
-    ),
     rampAngle_rad: formatScalarItem(
       "Ramp angle",
       blueprint.rampAngle_rad,
