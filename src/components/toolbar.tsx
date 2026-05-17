@@ -1,6 +1,6 @@
-import { useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import {
-  ArrowCounterClockwise,
+  Broom,
   Copy,
   Info,
   Moon,
@@ -11,7 +11,12 @@ import {
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupButton,
+  InputGroupInput,
+} from "@/components/ui/input-group"
 import { useTheme } from "@/components/theme-provider"
 import {
   AlertDialog,
@@ -72,6 +77,7 @@ function ThemeIcon({ theme }: { theme: Theme }) {
 }
 
 export function Toolbar({ onResetModelInput }: ToolbarProps) {
+  const shareUrlInputRef = useRef<HTMLInputElement>(null)
   const [shareUrl, setShareUrl] = useState("")
   const { setTheme, theme } = useTheme()
 
@@ -80,10 +86,6 @@ export function Toolbar({ onResetModelInput }: ToolbarProps) {
 
     setTheme(nextTheme)
     toast(getThemeMessage(nextTheme))
-  }
-
-  function updateShareUrl() {
-    setShareUrl(window.location.href)
   }
 
   async function copyShareUrl() {
@@ -95,6 +97,37 @@ export function Toolbar({ onResetModelInput }: ToolbarProps) {
     } catch {
       toast("Could not copy URL")
     }
+  }
+
+  const revealShareUrlStart = useCallback(() => {
+    function resetInputScroll() {
+      const input = shareUrlInputRef.current
+
+      if (!input) {
+        return
+      }
+
+      input.setSelectionRange(0, 0)
+      input.scrollLeft = 0
+    }
+
+    requestAnimationFrame(() => {
+      resetInputScroll()
+      requestAnimationFrame(resetInputScroll)
+    })
+  }, [])
+
+  useEffect(() => {
+    revealShareUrlStart()
+  }, [revealShareUrlStart, shareUrl])
+
+  function handleShareOpenChange(open: boolean) {
+    if (!open) {
+      return
+    }
+
+    setShareUrl(window.location.href)
+    revealShareUrlStart()
   }
 
   return (
@@ -109,7 +142,7 @@ export function Toolbar({ onResetModelInput }: ToolbarProps) {
             />
           }
         >
-          <ArrowCounterClockwise size={16} />
+          <Broom size={16} />
         </AlertDialogTrigger>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -134,12 +167,11 @@ export function Toolbar({ onResetModelInput }: ToolbarProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-      <Popover>
+      <Popover onOpenChange={handleShareOpenChange}>
         <PopoverTrigger
           render={
             <Button
               aria-label="Share model"
-              onClick={updateShareUrl}
               size="icon"
               variant="ghost"
             />
@@ -157,17 +189,25 @@ export function Toolbar({ onResetModelInput }: ToolbarProps) {
               Copy this URL to reopen the current inputs.
             </PopoverDescription>
           </PopoverHeader>
-          <div className="flex gap-2">
-            <Input
+          <InputGroup>
+            <InputGroupInput
               readOnly
+              ref={shareUrlInputRef}
               aria-label="Share URL"
+              className="text-left"
+              onFocus={revealShareUrlStart}
               value={shareUrl || window.location.href}
             />
-            <Button onClick={copyShareUrl} variant="secondary">
-              <Copy size={16} />
-              Copy
-            </Button>
-          </div>
+            <InputGroupAddon align="inline-end">
+              <InputGroupButton
+                aria-label="Copy share URL"
+                onClick={copyShareUrl}
+                size="icon-xs"
+              >
+                <Copy size={16} />
+              </InputGroupButton>
+            </InputGroupAddon>
+          </InputGroup>
         </PopoverContent>
       </Popover>
       <Button
