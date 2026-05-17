@@ -40,6 +40,4 @@ export const defaultModelInput: ModelInput = {
   impactFrictionCoefficientTolerance_ratio: 0.05,
   spinTransferEfficiency_ratio: 0.3,
   spinTransferEfficiencyTolerance_ratio: 0.05,
-  drumComplianceFactor_ratio: 1,
-  drumComplianceFactorTolerance_ratio: 0.1,
 }

@@ -163,11 +163,6 @@ function blueprintEntries(blueprint: Blueprint): BlueprintItem[] {
 
 function remainingBlueprintEntries(blueprint: Blueprint): BlueprintItem[] {
   const labels: Record<keyof Blueprint, BlueprintItem> = {
-    drumComplianceFactor_ratio: formatScalarItem(
-      "Drum compliance",
-      blueprint.drumComplianceFactor_ratio,
-      ""
-    ),
     drumPivotArmLength_m: formatScalarItem(
       "Drum pivot arm length",
       blueprint.drumPivotArmLength_m,

@@ -271,9 +271,5 @@ export function solveBlueprint(input: ModelInput): Blueprint {
       input.spinTransferEfficiency_ratio,
       input.spinTransferEfficiencyTolerance_ratio
     ),
-    drumComplianceFactor_ratio: blueprintInputToleranceValue(
-      input.drumComplianceFactor_ratio,
-      input.drumComplianceFactorTolerance_ratio
-    ),
   }
 }

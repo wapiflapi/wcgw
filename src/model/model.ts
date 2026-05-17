@@ -43,8 +43,6 @@ export type ModelInput = {
   impactFrictionCoefficientTolerance_ratio: number
   spinTransferEfficiency_ratio: number
   spinTransferEfficiencyTolerance_ratio: number
-  drumComplianceFactor_ratio: number
-  drumComplianceFactorTolerance_ratio: number
 }
 
 export type Blueprint = {
@@ -74,7 +72,6 @@ export type Blueprint = {
   impactRestitutionCoefficient_ratio: BlueprintValue
   impactFrictionCoefficient_ratio: BlueprintValue
   spinTransferEfficiency_ratio: BlueprintValue
-  drumComplianceFactor_ratio: BlueprintValue
 }
 
 export type BlueprintRealization = {

@@ -41,8 +41,6 @@ const MODEL_INPUT_HASH_ALIASES = {
   impactFrictionCoefficientTolerance_ratio: "ift",
   spinTransferEfficiency_ratio: "st",
   spinTransferEfficiencyTolerance_ratio: "stt",
-  drumComplianceFactor_ratio: "dc",
-  drumComplianceFactorTolerance_ratio: "dct",
 } satisfies Record<keyof ModelInput, string>
 
 function modelInputKeys() {

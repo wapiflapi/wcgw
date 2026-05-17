@@ -1,1 +1,1 @@
-- Account for possible upward snare momentum when the drum head is bouncing during impact.
+- Account for drum motion during impact, including possible upward snare momentum when the drum head is bouncing.

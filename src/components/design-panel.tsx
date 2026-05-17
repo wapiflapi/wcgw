@@ -563,112 +563,7 @@ export function DesignPanel({
           </FieldSet>
 
           <FieldSet>
-            <FieldLegend>Impact</FieldLegend>
-            <FieldGroup>
-              <ValueWithToleranceField
-                id="drumComplianceFactor_ratio"
-                label={
-                  <InfoLabel why="A placeholder calibration factor for how much the drum head flexes during contact. It is carried through the model for the contact math.">
-                    Drum compliance
-                  </InfoLabel>
-                }
-                value={formatNumber(modelInput.drumComplianceFactor_ratio, 2)}
-                toleranceId="drumComplianceFactorTolerance_ratio"
-                toleranceValue={formatNumber(
-                  modelInput.drumComplianceFactorTolerance_ratio,
-                  2
-                )}
-                toleranceWhy="Use this as the calibration spread for a tuned drum, not as a range across possible drum heads."
-                onValueChange={(factor) => {
-                  updateInput("drumComplianceFactor_ratio", factor)
-                }}
-                onToleranceChange={(tolerance) => {
-                  updateInput("drumComplianceFactorTolerance_ratio", tolerance)
-                }}
-              />
-              <ValueWithToleranceField
-                id="spinTransferEfficiency_ratio"
-                label={
-                  <InfoLabel why="Controls how much surface slip at impact is converted into marble spin and tangential bounce speed.">
-                    Impact spin transfer
-                  </InfoLabel>
-                }
-                value={formatNumber(modelInput.spinTransferEfficiency_ratio, 2)}
-                toleranceId="spinTransferEfficiencyTolerance_ratio"
-                toleranceValue={formatNumber(
-                  modelInput.spinTransferEfficiencyTolerance_ratio,
-                  2
-                )}
-                toleranceWhy="Use this as the expected repeatability after tuning this drum's impact response."
-                onValueChange={(efficiency) => {
-                  updateInput("spinTransferEfficiency_ratio", efficiency)
-                }}
-                onToleranceChange={(tolerance) => {
-                  updateInput(
-                    "spinTransferEfficiencyTolerance_ratio",
-                    tolerance
-                  )
-                }}
-              />
-              <ValueWithToleranceField
-                id="impactRestitutionCoefficient_ratio"
-                label={
-                  <InfoLabel why="Controls the normal bounce. Higher values return more speed away from the drum surface after impact.">
-                    Impact restitution
-                  </InfoLabel>
-                }
-                value={formatNumber(
-                  modelInput.impactRestitutionCoefficient_ratio,
-                  2
-                )}
-                toleranceId="impactRestitutionCoefficientTolerance_ratio"
-                toleranceValue={formatNumber(
-                  modelInput.impactRestitutionCoefficientTolerance_ratio,
-                  2
-                )}
-                toleranceWhy="Use this as variation around a measured or tuned bounce response for this drum."
-                onValueChange={(coefficient) => {
-                  updateInput("impactRestitutionCoefficient_ratio", coefficient)
-                }}
-                onToleranceChange={(tolerance) => {
-                  updateInput(
-                    "impactRestitutionCoefficientTolerance_ratio",
-                    tolerance
-                  )
-                }}
-              />
-              <ValueWithToleranceField
-                id="impactFrictionCoefficient_ratio"
-                label={
-                  <InfoLabel why="Controls how much tangential speed is lost during contact with the drum head.">
-                    Impact friction
-                  </InfoLabel>
-                }
-                value={formatNumber(
-                  modelInput.impactFrictionCoefficient_ratio,
-                  2
-                )}
-                toleranceId="impactFrictionCoefficientTolerance_ratio"
-                toleranceValue={formatNumber(
-                  modelInput.impactFrictionCoefficientTolerance_ratio,
-                  2
-                )}
-                toleranceWhy="Use this as variation around a measured or tuned tangential response for this drum."
-                onValueChange={(coefficient) => {
-                  updateInput("impactFrictionCoefficient_ratio", coefficient)
-                }}
-                onToleranceChange={(tolerance) => {
-                  updateInput(
-                    "impactFrictionCoefficientTolerance_ratio",
-                    tolerance
-                  )
-                }}
-              />
-            </FieldGroup>
-          </FieldSet>
-
-          <FieldSet>
-            <FieldLegend>Friction & Losses</FieldLegend>
+            <FieldLegend>Roll</FieldLegend>
             <FieldGroup>
               <ValueWithToleranceField
                 id="rampEnergyEfficiency_ratio"
@@ -797,6 +692,90 @@ export function DesignPanel({
                 }}
                 onToleranceChange={(tolerance) => {
                   updateInput("rollingInertiaFactorTolerance_ratio", tolerance)
+                }}
+              />
+            </FieldGroup>
+          </FieldSet>
+
+          <FieldSet>
+            <FieldLegend>Impact</FieldLegend>
+            <FieldGroup>
+              <ValueWithToleranceField
+                id="spinTransferEfficiency_ratio"
+                label={
+                  <InfoLabel why="Controls how much surface slip at impact is converted into marble spin and tangential bounce speed.">
+                    Impact spin transfer
+                  </InfoLabel>
+                }
+                value={formatNumber(modelInput.spinTransferEfficiency_ratio, 2)}
+                toleranceId="spinTransferEfficiencyTolerance_ratio"
+                toleranceValue={formatNumber(
+                  modelInput.spinTransferEfficiencyTolerance_ratio,
+                  2
+                )}
+                toleranceWhy="Use this as the expected repeatability after tuning this drum's impact response."
+                onValueChange={(efficiency) => {
+                  updateInput("spinTransferEfficiency_ratio", efficiency)
+                }}
+                onToleranceChange={(tolerance) => {
+                  updateInput(
+                    "spinTransferEfficiencyTolerance_ratio",
+                    tolerance
+                  )
+                }}
+              />
+              <ValueWithToleranceField
+                id="impactRestitutionCoefficient_ratio"
+                label={
+                  <InfoLabel why="Controls the normal bounce. Higher values return more speed away from the drum surface after impact.">
+                    Impact restitution
+                  </InfoLabel>
+                }
+                value={formatNumber(
+                  modelInput.impactRestitutionCoefficient_ratio,
+                  2
+                )}
+                toleranceId="impactRestitutionCoefficientTolerance_ratio"
+                toleranceValue={formatNumber(
+                  modelInput.impactRestitutionCoefficientTolerance_ratio,
+                  2
+                )}
+                toleranceWhy="Use this as variation around a measured or tuned bounce response for this drum."
+                onValueChange={(coefficient) => {
+                  updateInput("impactRestitutionCoefficient_ratio", coefficient)
+                }}
+                onToleranceChange={(tolerance) => {
+                  updateInput(
+                    "impactRestitutionCoefficientTolerance_ratio",
+                    tolerance
+                  )
+                }}
+              />
+              <ValueWithToleranceField
+                id="impactFrictionCoefficient_ratio"
+                label={
+                  <InfoLabel why="Controls how much tangential speed is lost during contact with the drum head.">
+                    Impact friction
+                  </InfoLabel>
+                }
+                value={formatNumber(
+                  modelInput.impactFrictionCoefficient_ratio,
+                  2
+                )}
+                toleranceId="impactFrictionCoefficientTolerance_ratio"
+                toleranceValue={formatNumber(
+                  modelInput.impactFrictionCoefficientTolerance_ratio,
+                  2
+                )}
+                toleranceWhy="Use this as variation around a measured or tuned tangential response for this drum."
+                onValueChange={(coefficient) => {
+                  updateInput("impactFrictionCoefficient_ratio", coefficient)
+                }}
+                onToleranceChange={(tolerance) => {
+                  updateInput(
+                    "impactFrictionCoefficientTolerance_ratio",
+                    tolerance
+                  )
                 }}
               />
             </FieldGroup>
