@@ -19,7 +19,7 @@ export type ModelInput = {
   impactPoint_y_m: number
   drumTiltAngle_rad: number
   drumPivotArmLength_m: number
-  drumPivotAngle_rad: number
+  drumPivotAngleRange_rad: number
   manufacturingPositionTolerance_m: number
   manufacturingLinearTolerance_m: number
   manufacturingAngleTolerance_rad: number
@@ -81,6 +81,8 @@ export type Snapshot = {
 export type ObservationChecks = {
   ballisticsImpactFound: boolean | null
   contactMovingIntoDrumOk: boolean | null
+  targetNormalImpactSpeedError_mps: number | null
+  targetReleaseToImpactTimeError_s: number | null
   rampReliableAccelerationOk: boolean | null
   rampRequiredStaticFrictionCoefficient_ratio: number | null
   rampStaticFrictionOk: boolean | null

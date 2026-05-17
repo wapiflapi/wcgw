@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState } from "react"
 
 import { useTheme } from "@/components/theme-provider"
-import type { Blueprint } from "@/model/model"
+import type { Blueprint, Observation, Snapshot } from "@/model/model"
 
 type BoardOptions = Omit<Partial<JXG.BoardAttributes>, "axis" | "grid"> & {
   axis?: boolean | Record<string, unknown>
@@ -32,14 +32,34 @@ type SchematicElements = {
   releasePoint: JXG.Point
 }
 
+type MarblePathStyle = {
+  dash?: number
+  strokeColor: string
+  strokeOpacity?: number
+  strokeWidth: number
+}
+
+type MarblePathSpec = {
+  observation: Observation
+  style: MarblePathStyle
+}
+
+type MarblePathElements = {
+  bounceArc: JXG.GeometryElement
+  dropArc: JXG.GeometryElement
+}
+
 type SchematicBoardProps = {
   blueprint: Blueprint | null
+  nominalObservation: Observation | null
+  sampledObservations: Observation[]
 }
 
 const DEFAULT_BOUNDS = [-1, 1, 1, -1] as [number, number, number, number]
 const LINE_HANDLE_DISTANCE_m = 1
 const MIN_VIEW_SIZE_m = 0.5
 const VIEW_MARGIN_RATIO = 0.25
+const MIN_TRAJECTORY_TIME_s = 0.001
 
 function getThemeColor(name: string) {
   return getComputedStyle(document.documentElement)
@@ -125,7 +145,7 @@ function getSchematicGeometry(blueprint: Blueprint): SchematicGeometry {
   const width_m = Math.max(maxX_m - minX_m, MIN_VIEW_SIZE_m)
   const height_m = Math.max(maxY_m - minY_m, MIN_VIEW_SIZE_m)
   const viewSize_m = Math.max(width_m, height_m)
-  const center_x_m = (minX_m + maxX_m) / 2
+  const center_x_m = 0
   const center_y_m = (minY_m + maxY_m) / 2
   const halfViewSize_m = (viewSize_m * (1 + VIEW_MARGIN_RATIO * 2)) / 2
 
@@ -213,6 +233,171 @@ function createSchematicElements(
   }
 }
 
+function projectilePosition_x_m(snapshot: Snapshot, time_s: number) {
+  return snapshot.marblePosition_x_m + snapshot.marbleSpeed_x_mps * time_s
+}
+
+function projectilePosition_y_m(
+  snapshot: Snapshot,
+  gravity_mps2: number,
+  time_s: number
+) {
+  return (
+    snapshot.marblePosition_y_m +
+    snapshot.marbleSpeed_y_mps * time_s -
+    0.5 * gravity_mps2 * time_s ** 2
+  )
+}
+
+function positiveLinearTime_s(numerator: number, denominator: number) {
+  if (Math.abs(denominator) <= Number.EPSILON) {
+    return null
+  }
+
+  const time_s = numerator / denominator
+
+  return time_s > MIN_TRAJECTORY_TIME_s ? time_s : null
+}
+
+function positiveQuadraticTimes_s(a: number, b: number, c: number) {
+  if (Math.abs(a) <= Number.EPSILON) {
+    const time_s = positiveLinearTime_s(-c, b)
+
+    return time_s === null ? [] : [time_s]
+  }
+
+  const discriminant = b ** 2 - 4 * a * c
+
+  if (discriminant < 0) {
+    return []
+  }
+
+  const discriminantRoot = Math.sqrt(discriminant)
+  const denominator = 2 * a
+  const candidates = [
+    (-b - discriminantRoot) / denominator,
+    (-b + discriminantRoot) / denominator,
+  ]
+
+  return candidates.filter(
+    (time_s) => Number.isFinite(time_s) && time_s > MIN_TRAJECTORY_TIME_s
+  )
+}
+
+function getProjectileExitTime_s(
+  snapshot: Snapshot,
+  gravity_mps2: number,
+  bounds: [number, number, number, number]
+) {
+  const [left_m, top_m, right_m, bottom_m] = bounds
+
+  const horizontalExitTimes_s = [
+    positiveLinearTime_s(
+      left_m - snapshot.marblePosition_x_m,
+      snapshot.marbleSpeed_x_mps
+    ),
+    positiveLinearTime_s(
+      right_m - snapshot.marblePosition_x_m,
+      snapshot.marbleSpeed_x_mps
+    ),
+  ].filter((time_s): time_s is number => time_s !== null)
+
+  const verticalExitTimes_s = [
+    ...positiveQuadraticTimes_s(
+      -0.5 * gravity_mps2,
+      snapshot.marbleSpeed_y_mps,
+      snapshot.marblePosition_y_m - top_m
+    ),
+    ...positiveQuadraticTimes_s(
+      -0.5 * gravity_mps2,
+      snapshot.marbleSpeed_y_mps,
+      snapshot.marblePosition_y_m - bottom_m
+    ),
+  ]
+
+  const exitTimes_s = [...horizontalExitTimes_s, ...verticalExitTimes_s]
+
+  if (exitTimes_s.length === 0) {
+    return 1
+  }
+
+  return Math.min(...exitTimes_s)
+}
+
+function createMarblePathCurve(
+  board: JXG.Board,
+  snapshot: Snapshot,
+  gravity_mps2: number,
+  endTime_s: number,
+  style: MarblePathStyle
+) {
+  return board.create(
+    "curve",
+    [
+      (time_s: number) => projectilePosition_x_m(snapshot, time_s),
+      (time_s: number) =>
+        projectilePosition_y_m(snapshot, gravity_mps2, time_s),
+      0,
+      Math.max(endTime_s, MIN_TRAJECTORY_TIME_s),
+    ],
+    {
+      dash: style.dash,
+      fixed: true,
+      highlightStrokeColor: style.strokeColor,
+      strokeColor: style.strokeColor,
+      strokeOpacity: style.strokeOpacity,
+      strokeWidth: style.strokeWidth,
+    }
+  )
+}
+
+function createMarblePathElements(
+  board: JXG.Board,
+  bounds: [number, number, number, number],
+  pathSpec: MarblePathSpec
+): MarblePathElements {
+  const { observation, style } = pathSpec
+  const gravity_mps2 = observation.blueprintRealization.gravity_mps2
+
+  // Known flight time from drop to impact.
+  const dropArcTime_s =
+    observation.impactSnapshot.time_s - observation.dropSnapshot.time_s
+
+  // Preview the bounce until it exits the current schematic viewport.
+  const bounceArcTime_s = getProjectileExitTime_s(
+    observation.bounceSnapshot,
+    gravity_mps2,
+    bounds
+  )
+
+  return {
+    dropArc: createMarblePathCurve(
+      board,
+      observation.dropSnapshot,
+      gravity_mps2,
+      dropArcTime_s,
+      style
+    ),
+    bounceArc: createMarblePathCurve(
+      board,
+      observation.bounceSnapshot,
+      gravity_mps2,
+      bounceArcTime_s,
+      style
+    ),
+  }
+}
+
+function createMarblePaths(
+  board: JXG.Board,
+  bounds: [number, number, number, number],
+  pathSpecs: MarblePathSpec[]
+): MarblePathElements[] {
+  return pathSpecs
+    .filter((pathSpec) => pathSpec.observation.valid)
+    .map((pathSpec) => createMarblePathElements(board, bounds, pathSpec))
+}
+
 function removeSchematicElements(
   board: JXG.Board,
   elements: SchematicElements
@@ -226,6 +411,18 @@ function removeSchematicElements(
     elements.drumLineA,
     elements.drumLineB,
   ])
+}
+
+function removeMarblePaths(
+  board: JXG.Board,
+  elements: MarblePathElements[]
+) {
+  board.removeObject(
+    elements.flatMap((marblePath) => [
+      marblePath.dropArc,
+      marblePath.bounceArc,
+    ])
+  )
 }
 
 function updateSchematicElements(
@@ -242,7 +439,11 @@ function updateSchematicElements(
   board.update()
 }
 
-export function SchematicBoard({ blueprint }: SchematicBoardProps) {
+export function SchematicBoard({
+  blueprint,
+  nominalObservation,
+  sampledObservations,
+}: SchematicBoardProps) {
   const boardId = `schematic-${useId().replaceAll(":", "")}`
   const { resolvedTheme } = useTheme()
   const [renderedTheme, setRenderedTheme] = useState<
@@ -250,6 +451,7 @@ export function SchematicBoard({ blueprint }: SchematicBoardProps) {
   >(null)
   const boardRef = useRef<JXG.Board | null>(null)
   const elementsRef = useRef<SchematicElements | null>(null)
+  const marblePathsRef = useRef<MarblePathElements[]>([])
   const colorsRef = useRef<{
     background: string
     mutedForeground: string
@@ -329,6 +531,7 @@ export function SchematicBoard({ blueprint }: SchematicBoardProps) {
         freeBoard?.(boardRef.current)
         boardRef.current = null
         elementsRef.current = null
+        marblePathsRef.current = []
         colorsRef.current = null
       }
     }
@@ -343,6 +546,11 @@ export function SchematicBoard({ blueprint }: SchematicBoardProps) {
     }
 
     if (blueprint === null) {
+      if (marblePathsRef.current.length > 0) {
+        removeMarblePaths(board, marblePathsRef.current)
+        marblePathsRef.current = []
+      }
+
       if (elementsRef.current !== null) {
         removeSchematicElements(board, elementsRef.current)
         elementsRef.current = null
@@ -360,7 +568,52 @@ export function SchematicBoard({ blueprint }: SchematicBoardProps) {
     }
 
     updateSchematicElements(board, elementsRef.current, geometry)
-  }, [blueprint, renderedTheme])
+
+    if (marblePathsRef.current.length > 0) {
+      removeMarblePaths(board, marblePathsRef.current)
+      marblePathsRef.current = []
+    }
+
+    const marblePathSpecs: MarblePathSpec[] =
+      nominalObservation === null
+        ? sampledObservations.map((observation) => ({
+            observation,
+            style: {
+              strokeColor: colors.primary,
+              strokeOpacity: 0.08,
+              strokeWidth: 2,
+            },
+          }))
+        : [
+            {
+              observation: nominalObservation,
+              style: {
+                dash: 2,
+                strokeColor: colors.primary,
+                strokeOpacity: 1,
+                strokeWidth: 2,
+              },
+            },
+            ...sampledObservations.map((observation) => ({
+              observation,
+              style: {
+                strokeColor: colors.primary,
+                strokeOpacity: 0.08,
+                strokeWidth: 2,
+              },
+            })),
+          ]
+
+    marblePathsRef.current = createMarblePaths(
+      board,
+      geometry.bounds,
+      marblePathSpecs
+    )
+
+    if (marblePathsRef.current.length > 0) {
+      board.update()
+    }
+  }, [blueprint, nominalObservation, sampledObservations, renderedTheme])
 
   return (
     <div

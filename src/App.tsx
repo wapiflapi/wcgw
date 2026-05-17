@@ -14,7 +14,7 @@ const PIPELINE_RUN_OPTIONS: PipelineRunOptions = {
   observationRequestedRuns: 3000,
   observationInitialCheckpoints: [10, 100],
   observationRecurringCheckpointEvery: 1000,
-  observationRequestedSampleCount: 20,
+  observationRequestedSampleCount: 25,
 }
 
 export function App() {
@@ -34,7 +34,11 @@ export function App() {
           />
         </section>
         <section className="p-4 sm:col-start-2 sm:row-start-1 lg:col-start-2 lg:row-start-1">
-          <SchematicPanel blueprint={blueprint} />
+          <SchematicPanel
+            blueprint={blueprint}
+            nominalObservation={observations?.nominalObservation ?? null}
+            sampledObservations={observations?.samples ?? []}
+          />
         </section>
         <section className="p-4 sm:col-start-2 sm:row-start-2 lg:col-start-3 lg:row-start-1">
           <ObservationsPanel

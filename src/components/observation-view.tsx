@@ -5,6 +5,7 @@ import {
   FieldSet,
 } from "@/components/ui/field"
 import { formatNumber } from "@/lib/format"
+import { cn } from "@/lib/utils"
 import type { Observation, Snapshot } from "@/model/model"
 import { mToMm, sToMs } from "@/model/units"
 
@@ -16,6 +17,8 @@ type ObservationViewProps = {
 type ObservationItem = {
   label: string
   value: string
+  tone?: "default" | "ok" | "failed" | "pending"
+  emphasis?: "default" | "target"
 }
 
 type SnapshotItem = {
@@ -43,6 +46,51 @@ function formatTime_s(time_s: number) {
   return `${formatNumber(sToMs(time_s), 1)} ms`
 }
 
+function formatNullableSpeed_mps(speed_mps: number | null) {
+  return speed_mps === null
+    ? "pending"
+    : `${formatNumber(speed_mps, 4)} m/s`
+}
+
+function formatNullableTime_s(time_s: number | null) {
+  return time_s === null ? "pending" : formatTime_s(time_s)
+}
+
+function boolTone(value: boolean | null): ObservationItem["tone"] {
+  if (value === null) {
+    return "pending"
+  }
+
+  return value ? "ok" : "failed"
+}
+
+function errorTone(
+  error: number | null,
+  acceptableAbsoluteError: number
+): ObservationItem["tone"] {
+  if (error === null) {
+    return "pending"
+  }
+
+  return Math.abs(error) <= acceptableAbsoluteError ? "ok" : "failed"
+}
+
+function valueToneClass(tone: ObservationItem["tone"]) {
+  if (tone === "ok") {
+    return "text-emerald-600 dark:text-emerald-400"
+  }
+
+  if (tone === "failed") {
+    return "text-destructive"
+  }
+
+  if (tone === "pending") {
+    return "text-muted-foreground"
+  }
+
+  return undefined
+}
+
 function ObservationRows({ items }: { items: ObservationItem[] }) {
   return (
     <dl className="grid gap-2">
@@ -51,8 +99,23 @@ function ObservationRows({ items }: { items: ObservationItem[] }) {
           className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-1"
           key={item.label}
         >
-          <dt className="text-muted-foreground">{item.label}</dt>
-          <dd className="text-right tabular-nums">{item.value}</dd>
+          <dt
+            className={cn(
+              "text-muted-foreground",
+              item.emphasis === "target" && "self-end"
+            )}
+          >
+            {item.label}
+          </dt>
+          <dd
+            className={cn(
+              "text-right tabular-nums",
+              valueToneClass(item.tone),
+              item.emphasis === "target" && "text-lg font-semibold"
+            )}
+          >
+            {item.value}
+          </dd>
         </div>
       ))}
     </dl>
@@ -104,32 +167,46 @@ export function ObservationView({ observation, title }: ObservationViewProps) {
             value: observation.valid ? "valid" : "invalid",
           },
           {
+            label: "Timing error",
+            value: formatNullableTime_s(
+              observation.checks.targetReleaseToImpactTimeError_s
+            ),
+            tone: errorTone(
+              observation.checks.targetReleaseToImpactTimeError_s,
+              0.001
+            ),
+            emphasis: "target",
+          },
+          {
+            label: "Impact speed error",
+            value: formatNullableSpeed_mps(
+              observation.checks.targetNormalImpactSpeedError_mps
+            ),
+            tone: errorTone(
+              observation.checks.targetNormalImpactSpeedError_mps,
+              0.01
+            ),
+            emphasis: "target",
+          },
+          {
             label: "Ramp acceleration",
             value: formatBool(observation.checks.rampReliableAccelerationOk),
+            tone: boolTone(observation.checks.rampReliableAccelerationOk),
           },
           {
             label: "Ramp static friction",
             value: formatBool(observation.checks.rampStaticFrictionOk),
-          },
-          {
-            label: "Required static friction",
-            value:
-              observation.checks.rampRequiredStaticFrictionCoefficient_ratio ===
-              null
-                ? "pending"
-                : formatNumber(
-                    observation.checks
-                      .rampRequiredStaticFrictionCoefficient_ratio,
-                    3
-                  ),
+            tone: boolTone(observation.checks.rampStaticFrictionOk),
           },
           {
             label: "Ballistic impact",
             value: formatBool(observation.checks.ballisticsImpactFound),
+            tone: boolTone(observation.checks.ballisticsImpactFound),
           },
           {
             label: "Contact direction",
             value: formatBool(observation.checks.contactMovingIntoDrumOk),
+            tone: boolTone(observation.checks.contactMovingIntoDrumOk),
           },
         ]}
       />

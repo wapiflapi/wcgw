@@ -29,6 +29,17 @@ function blueprintValue(nominal: number): BlueprintValue {
   }
 }
 
+function blueprintNegativeToleranceValue(
+  nominal: number,
+  tolerance: number
+): BlueprintValue {
+  return {
+    nominal,
+    toleranceMinus: tolerance,
+    tolerancePlus: 0,
+  }
+}
+
 function solveDrumGeometry(input: ModelInput): DrumGeometry {
   // For the blueprint solve, impact is the marble center at the origin.
   // Pivot geometry belongs to the simulation stage.
@@ -210,9 +221,9 @@ export function solveBlueprint(input: ModelInput): Blueprint {
       input.drumPivotArmLength_m,
       manufacturingLinearTolerance_m
     ),
-    drumPivotAngle_rad: blueprintSolvedValue(
-      input.drumPivotAngle_rad,
-      manufacturingAngleTolerance_rad
+    drumPivotAngle_rad: blueprintNegativeToleranceValue(
+      0,
+      Math.abs(input.drumPivotAngleRange_rad)
     ),
 
     gravity_mps2: blueprintValue(input.gravity_mps2),

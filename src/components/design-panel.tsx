@@ -239,16 +239,15 @@ export function DesignPanel({
             <FieldLegend>Drum Pivot</FieldLegend>
             <FieldGroup>
               <SliderField
-                id="drumPivotAngle_deg"
-                label="Pivot angle"
+                id="drumPivotAngleRange_deg"
+                label="Pivot angle range"
                 unit="deg"
-                value={radToDeg(modelInput.drumPivotAngle_rad)}
-                min={-90}
-                max={0}
+                value={radToDeg(modelInput.drumPivotAngleRange_rad)}
+                min={0}
+                max={90}
                 step={1}
-                inverted
                 onChange={(angle_deg) => {
-                  updateInput("drumPivotAngle_rad", degToRad(angle_deg))
+                  updateInput("drumPivotAngleRange_rad", degToRad(angle_deg))
                 }}
               />
               <SliderField

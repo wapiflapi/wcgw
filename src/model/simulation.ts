@@ -15,9 +15,27 @@ type SimulationStageResult = {
 const emptyChecks: ObservationChecks = {
   ballisticsImpactFound: null,
   contactMovingIntoDrumOk: null,
+  targetNormalImpactSpeedError_mps: null,
+  targetReleaseToImpactTimeError_s: null,
   rampReliableAccelerationOk: null,
   rampRequiredStaticFrictionCoefficient_ratio: null,
   rampStaticFrictionOk: null,
+}
+
+function getPivotedDrumSurfaceAngle_rad(
+  blueprintRealization: BlueprintRealization
+) {
+  return (
+    blueprintRealization.drumTiltAngle_rad +
+    blueprintRealization.drumPivotAngle_rad
+  )
+}
+
+function getDrumNormal(drumSurfaceAngle_rad: number) {
+  return {
+    x: -Math.sin(drumSurfaceAngle_rad),
+    y: Math.cos(drumSurfaceAngle_rad),
+  }
 }
 
 function simulateRelease(
@@ -263,9 +281,6 @@ function simulateBallisticsUntilImpact(
   blueprintRealization: BlueprintRealization,
   dropSnapshot: Snapshot
 ): SimulationStageResult {
-  // Drum tilt angle before the pivot arm moves.
-  const drumTiltAngle_rad = blueprintRealization.drumTiltAngle_rad
-
   // Pivot angle applied to the whole drum assembly.
   const drumPivotAngle_rad = blueprintRealization.drumPivotAngle_rad
 
@@ -313,7 +328,8 @@ function simulateBallisticsUntilImpact(
     drumPivotPoint_y_m + pivotedImpactOffsetFromPivot_y_m
 
   // Final drum surface angle after the pivot rotates the whole assembly.
-  const drumSurfaceAngle_rad = drumTiltAngle_rad + drumPivotAngle_rad
+  const drumSurfaceAngle_rad =
+    getPivotedDrumSurfaceAngle_rad(blueprintRealization)
 
   const checks = {
     ballisticsImpactFound: false,
@@ -328,10 +344,7 @@ function simulateBallisticsUntilImpact(
   }
 
   // Unit normal of the tilted drum surface, pointing outward.
-  const drumNormal = {
-    x: -Math.sin(drumSurfaceAngle_rad),
-    y: Math.cos(drumSurfaceAngle_rad),
-  }
+  const drumNormal = getDrumNormal(drumSurfaceAngle_rad)
 
   // Gravity vector.
   const gravityVector_mps2 = {
@@ -458,16 +471,13 @@ function simulateBallisticsUntilImpact(
 
 function simulateContactUntilBounce(
   blueprintRealization: BlueprintRealization,
+  releaseSnapshot: Snapshot,
+  impactIsTrusted: boolean,
   impactSnapshot: Snapshot
 ): SimulationStageResult {
-  // Drum tilt angle before the pivot arm moves.
-  const drumTiltAngle_rad = blueprintRealization.drumTiltAngle_rad
-
-  // Pivot angle applied to the whole drum assembly.
-  const drumPivotAngle_rad = blueprintRealization.drumPivotAngle_rad
-
   // Final drum surface angle after the pivot rotates the whole assembly.
-  const drumSurfaceAngle_rad = drumTiltAngle_rad + drumPivotAngle_rad
+  const drumSurfaceAngle_rad =
+    getPivotedDrumSurfaceAngle_rad(blueprintRealization)
 
   // Radius lets us convert between spin and surface speed.
   const marbleRadius_m = blueprintRealization.marbleDiameter_m / 2
@@ -491,10 +501,7 @@ function simulateContactUntilBounce(
   }
 
   // Unit normal of the drum surface.
-  const drumNormal = {
-    x: -Math.sin(drumSurfaceAngle_rad),
-    y: Math.cos(drumSurfaceAngle_rad),
-  }
+  const drumNormal = getDrumNormal(drumSurfaceAngle_rad)
 
   // Impact velocity projected along the drum tangent.
   const impactTangentialSpeed_mps =
@@ -521,8 +528,26 @@ function simulateContactUntilBounce(
   // Incoming velocity must move into the drum for a bounce to make sense.
   const contactMovingIntoDrumOk = incomingNormalSpeed_mps < 0
 
+  // Target verification only makes sense if the marble really reached impact.
+  const canVerifyTargets = impactIsTrusted
+
+  // The error is actual total time minus requested total time.
+  const targetReleaseToImpactTimeError_s = canVerifyTargets
+    ? impactSnapshot.time_s -
+      releaseSnapshot.time_s -
+      blueprintRealization.targetReleaseToImpactTime_s
+    : null
+
+  // The impact speed target is measured into the drum normal.
+  const targetNormalImpactSpeedError_mps = canVerifyTargets
+    ? -impactNormalSpeed_mps -
+      blueprintRealization.targetNormalImpactSpeed_mps
+    : null
+
   const checks = {
     contactMovingIntoDrumOk,
+    targetNormalImpactSpeedError_mps,
+    targetReleaseToImpactTimeError_s,
   }
 
   if (marbleRadius_m <= 0) {
@@ -615,6 +640,9 @@ export function runSimulationStep(
   const impactSnapshot = ballisticsResult.snapshot
   const contactResult = simulateContactUntilBounce(
     blueprintRealization,
+    releaseSnapshot,
+    rampResult.invalidReason === null &&
+      ballisticsResult.invalidReason === null,
     impactSnapshot
   )
   const bounceSnapshot = contactResult.snapshot
@@ -683,14 +711,6 @@ export function reduceObservationAggregate(
 
   if (requestedSampleCount > 0 && samples.length < requestedSampleCount) {
     samples = [...samples, observation]
-  } else if (requestedSampleCount > 0) {
-    const replacementIndex = Math.floor(Math.random() * completedRuns)
-
-    if (replacementIndex < requestedSampleCount) {
-      samples = samples.map((sample, index) =>
-        index === replacementIndex ? observation : sample
-      )
-    }
   }
 
   return {

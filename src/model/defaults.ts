@@ -16,7 +16,7 @@ export const defaultModelInput: ModelInput = {
   impactPoint_y_m: 0,
   drumTiltAngle_rad: 0,
   drumPivotArmLength_m: 0.5,
-  drumPivotAngle_rad: 0,
+  drumPivotAngleRange_rad: 0,
   manufacturingPositionTolerance_m: 0.005,
   manufacturingLinearTolerance_m: 0.0005,
   manufacturingAngleTolerance_rad: degToRad(1),
