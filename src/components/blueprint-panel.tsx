@@ -309,41 +309,50 @@ function remainingBlueprintEntries(blueprint: Blueprint): BlueprintItem[] {
 }
 
 function BlueprintRows({ items }: { items: BlueprintItem[] }) {
+  function renderValueLine(line: BlueprintValueLine) {
+    return (
+      <>
+        {line.prefix ? `${line.prefix} ` : null}
+        {line.nominal}
+        {line.tolerance ? (
+          <span className="text-muted-foreground"> {line.tolerance}</span>
+        ) : null}
+      </>
+    )
+  }
+
   return (
     <table className="w-full border-separate border-spacing-0">
       <tbody>
-        {items.flatMap((item) =>
-          item.value.flatMap((line) => {
-            const lines = line.segments ?? [line]
-
-            return lines.map((segment) => {
-              const label = segment.prefix
-                ? `${item.label} ${segment.prefix}`
-                : item.label
-              const key = `${label}${segment.nominal}${segment.tolerance ?? ""}`
-
-              return (
-                <tr key={key}>
-                  <th
-                    className="py-1 pr-4 text-left font-normal text-muted-foreground"
-                    scope="row"
-                  >
-                    {label}
-                  </th>
-                  <td className="py-1 text-right tabular-nums">
-                    {segment.nominal}
-                    {segment.tolerance ? (
-                      <span className="text-muted-foreground">
-                        {" "}
-                        {segment.tolerance}
-                      </span>
-                    ) : null}
-                  </td>
-                </tr>
-              )
-            })
-          })
-        )}
+        {items.map((item) => (
+          <tr key={item.label}>
+            <th
+              className="py-1 pr-4 text-left font-normal text-muted-foreground"
+              scope="row"
+            >
+              {item.label}
+            </th>
+            <td className="py-1 text-right tabular-nums">
+              {item.value.map((line) => (
+                <span
+                  className="block"
+                  key={`${line.prefix ?? ""}${line.nominal}${line.tolerance ?? ""}${line.segments?.length ?? ""}`}
+                >
+                  {line.segments
+                    ? line.segments.map((segment, index) => (
+                        <span
+                          key={`${segment.prefix ?? ""}${segment.nominal}${segment.tolerance ?? ""}`}
+                        >
+                          {index > 0 ? ", " : null}
+                          {renderValueLine(segment)}
+                        </span>
+                      ))
+                    : renderValueLine(line)}
+                </span>
+              ))}
+            </td>
+          </tr>
+        ))}
       </tbody>
     </table>
   )
