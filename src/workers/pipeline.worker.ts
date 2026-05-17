@@ -8,9 +8,9 @@ import {
 import {
   createObservationAggregate,
   reduceObservationAggregate,
-  runSimulationStep,
   setNominalObservation,
-} from "@/model/simulation"
+} from "@/model/aggregation"
+import { runSimulationStep } from "@/model/simulation"
 import {
   createNominalBlueprintRealization,
   sampleBlueprintRealization,
