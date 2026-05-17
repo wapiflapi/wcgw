@@ -8,7 +8,9 @@ import {
 import {
   createObservationAggregate,
   reduceObservationAggregate,
+  runNominalObservation,
   runSimulationStep,
+  setNominalObservation,
 } from "@/model/simulation"
 import { solveBlueprint } from "@/model/solve"
 
@@ -33,9 +35,10 @@ export type PipelineWorkerApi = {
 
 export type PipelineRunOptions = {
   cancellationCheckEvery: number
-  observationCapRuns: number
+  observationRequestedRuns: number
   observationInitialCheckpoints: number[]
   observationRecurringCheckpointEvery: number
+  observationRequestedSampleCount: number
 }
 
 let activeRunId = 0
@@ -44,7 +47,7 @@ function isObservationCheckpoint(run: number, options: PipelineRunOptions) {
   return (
     options.observationInitialCheckpoints.includes(run) ||
     run % options.observationRecurringCheckpointEvery === 0 ||
-    run === options.observationCapRuns
+    run === options.observationRequestedRuns
   )
 }
 
@@ -68,7 +71,9 @@ const api: PipelineWorkerApi = {
   async runPipeline(input, options, onEvent) {
     const runId = ++activeRunId
     const blueprint = solveBlueprint(input)
-    let observations = createObservationAggregate(options.observationCapRuns)
+    let observations = createObservationAggregate(
+      options.observationRequestedRuns
+    )
 
     if (runId !== activeRunId) {
       return
@@ -76,14 +81,25 @@ const api: PipelineWorkerApi = {
 
     onEvent({ blueprint, type: "blueprint" })
 
-    for (let run = 1; run <= options.observationCapRuns; run += 1) {
+    observations = setNominalObservation(
+      observations,
+      runNominalObservation(blueprint)
+    )
+
+    onEvent({
+      observations,
+      type: "observations",
+    })
+
+    for (let run = 1; run <= options.observationRequestedRuns; run += 1) {
       if (runId !== activeRunId) {
         return
       }
 
       observations = reduceObservationAggregate(
         observations,
-        runSimulationStep(blueprint, run)
+        runSimulationStep(blueprint, run + 1),
+        options.observationRequestedSampleCount
       )
 
       if (isObservationCheckpoint(run, options)) {

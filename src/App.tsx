@@ -11,9 +11,10 @@ import type { PipelineRunOptions } from "@/workers/pipeline.worker"
 
 const PIPELINE_RUN_OPTIONS: PipelineRunOptions = {
   cancellationCheckEvery: 25,
-  observationCapRuns: 3000,
+  observationRequestedRuns: 3000,
   observationInitialCheckpoints: [10, 100],
   observationRecurringCheckpointEvery: 1000,
+  observationRequestedSampleCount: 20,
 }
 
 export function App() {

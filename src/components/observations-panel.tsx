@@ -34,7 +34,7 @@ export function ObservationsPanel({
       <TabsContent value="observations">
         {observations === null
           ? "Observations pending"
-          : `${observations.completedRuns} / ${observations.capRuns} runs`}
+          : `${observations.completedRuns} / ${observations.requestedRuns} runs, ${observations.samples.length} samples`}
       </TabsContent>
     </Tabs>
   )

@@ -72,7 +72,11 @@ export type Blueprint = {
   drumComplianceFactor_ratio: BlueprintValue
 }
 
+export type Observation = Record<string, never>
+
 export type ObservationAggregate = {
   completedRuns: number
-  capRuns: number
+  requestedRuns: number
+  nominalObservation: Observation | null
+  samples: Observation[]
 }
