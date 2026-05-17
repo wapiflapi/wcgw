@@ -12,14 +12,14 @@ import type { PipelineRunOptions } from "@/workers/pipeline.worker"
 const PIPELINE_RUN_OPTIONS: PipelineRunOptions = {
   cancellationCheckEvery: 25,
   observationRequestedRuns: 3000,
-  observationInitialCheckpoints: [10, 100],
+  observationInitialCheckpoints: [5, 10, 15, 20, 25, 100],
   observationRecurringCheckpointEvery: 1000,
   observationRequestedSampleCount: 25,
 }
 
 export function App() {
   const [modelInput, setModelInput] = useState<ModelInput>(defaultModelInput)
-  const { blueprint, observations } = usePipeline(
+  const { blueprint, observations, observationsStale } = usePipeline(
     modelInput,
     PIPELINE_RUN_OPTIONS
   )
@@ -37,6 +37,7 @@ export function App() {
           <SchematicPanel
             blueprint={blueprint}
             nominalObservation={observations?.nominalObservation ?? null}
+            nominalObservationStale={observationsStale}
             sampledObservations={observations?.samples ?? []}
           />
         </section>

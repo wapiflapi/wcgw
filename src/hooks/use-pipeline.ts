@@ -1,5 +1,5 @@
 import { proxy as comlinkProxy, releaseProxy, wrap } from "comlink"
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 
 import type { Blueprint, ModelInput, ObservationAggregate } from "@/model/model"
 import type {
@@ -15,6 +15,8 @@ export function usePipeline(
   const [observations, setObservations] = useState<ObservationAggregate | null>(
     null
   )
+  const [observationsStale, setObservationsStale] = useState(false)
+  const workerApiRef = useRef<PipelineWorkerApi | null>(null)
 
   useEffect(() => {
     const worker = new Worker(
@@ -22,6 +24,22 @@ export function usePipeline(
       { type: "module" }
     )
     const workerApi = wrap<PipelineWorkerApi>(worker)
+    workerApiRef.current = workerApi
+
+    return () => {
+      workerApiRef.current = null
+      workerApi[releaseProxy]()
+      worker.terminate()
+    }
+  }, [])
+
+  useEffect(() => {
+    const workerApi = workerApiRef.current
+
+    if (workerApi === null) {
+      return
+    }
+
     let active = true
 
     void workerApi.runPipeline(
@@ -34,23 +52,23 @@ export function usePipeline(
 
         if (event.type === "blueprint") {
           setBlueprint(event.blueprint)
-          setObservations(null)
+          setObservationsStale(true)
           return
         }
 
         setObservations(event.observations)
+        setObservationsStale(false)
       })
     )
 
     return () => {
       active = false
-      workerApi[releaseProxy]()
-      worker.terminate()
     }
   }, [modelInput, options])
 
   return {
     blueprint,
     observations,
+    observationsStale,
   }
 }

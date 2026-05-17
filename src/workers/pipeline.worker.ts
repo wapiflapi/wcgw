@@ -96,6 +96,8 @@ const api: PipelineWorkerApi = {
       type: "observations",
     })
 
+    await yieldToEventLoop()
+
     for (let run = 1; run <= options.observationRequestedRuns; run += 1) {
       if (runId !== activeRunId) {
         return

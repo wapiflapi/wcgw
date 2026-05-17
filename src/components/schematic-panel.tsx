@@ -5,12 +5,14 @@ import type { Blueprint, Observation } from "@/model/model"
 type SchematicPanelProps = {
   blueprint: Blueprint | null
   nominalObservation: Observation | null
+  nominalObservationStale: boolean
   sampledObservations: Observation[]
 }
 
 export function SchematicPanel({
   blueprint,
   nominalObservation,
+  nominalObservationStale,
   sampledObservations,
 }: SchematicPanelProps) {
   return (
@@ -20,6 +22,7 @@ export function SchematicPanel({
         <SchematicBoard
           blueprint={blueprint}
           nominalObservation={nominalObservation}
+          nominalObservationStale={nominalObservationStale}
           sampledObservations={sampledObservations}
         />
       </div>

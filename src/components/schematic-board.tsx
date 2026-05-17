@@ -39,19 +39,23 @@ type MarblePathStyle = {
   strokeWidth: number
 }
 
-type MarblePathSpec = {
-  observation: Observation
-  style: MarblePathStyle
+type MarblePathElements = {
+  bounceArc: MarblePathCurve
+  dropArc: MarblePathCurve
+  boundsKey: string
+  observation: Observation | null
+  styleKey: string
 }
 
-type MarblePathElements = {
-  bounceArc: JXG.GeometryElement
-  dropArc: JXG.GeometryElement
+type MarblePathCurve = JXG.GeometryElement & {
+  dataX: number[]
+  dataY: number[]
 }
 
 type SchematicBoardProps = {
   blueprint: Blueprint | null
   nominalObservation: Observation | null
+  nominalObservationStale: boolean
   sampledObservations: Observation[]
 }
 
@@ -60,6 +64,7 @@ const LINE_HANDLE_DISTANCE_m = 1
 const MIN_VIEW_SIZE_m = 0.5
 const VIEW_MARGIN_RATIO = 0.25
 const MIN_TRAJECTORY_TIME_s = 0.001
+const TRAJECTORY_POINT_COUNT = 48
 
 function getThemeColor(name: string) {
   return getComputedStyle(document.documentElement)
@@ -324,41 +329,144 @@ function getProjectileExitTime_s(
   return Math.min(...exitTimes_s)
 }
 
-function createMarblePathCurve(
-  board: JXG.Board,
+function getProjectilePathPoints(
   snapshot: Snapshot,
   gravity_mps2: number,
-  endTime_s: number,
-  style: MarblePathStyle
+  endTime_s: number
 ) {
+  const pointCount = TRAJECTORY_POINT_COUNT
+  const safeEndTime_s = Math.max(endTime_s, MIN_TRAJECTORY_TIME_s)
+  const xValues_m: number[] = []
+  const yValues_m: number[] = []
+
+  for (let index = 0; index < pointCount; index += 1) {
+    const ratio = pointCount === 1 ? 0 : index / (pointCount - 1)
+    const time_s = safeEndTime_s * ratio
+
+    xValues_m.push(projectilePosition_x_m(snapshot, time_s))
+    yValues_m.push(projectilePosition_y_m(snapshot, gravity_mps2, time_s))
+  }
+
+  return {
+    xValues_m,
+    yValues_m,
+  }
+}
+
+function createMarblePathCurve(
+  board: JXG.Board,
+  style: MarblePathStyle
+): MarblePathCurve {
   return board.create(
     "curve",
-    [
-      (time_s: number) => projectilePosition_x_m(snapshot, time_s),
-      (time_s: number) =>
-        projectilePosition_y_m(snapshot, gravity_mps2, time_s),
-      0,
-      Math.max(endTime_s, MIN_TRAJECTORY_TIME_s),
-    ],
+    [[], []],
     {
+      doAdvancedPlot: false,
       dash: style.dash,
       fixed: true,
+      highlight: false,
       highlightStrokeColor: style.strokeColor,
+      highlightStrokeOpacity: style.strokeOpacity,
+      highlightStrokeWidth: style.strokeWidth,
+      numberPointsHigh: TRAJECTORY_POINT_COUNT,
+      numberPointsLow: TRAJECTORY_POINT_COUNT,
       strokeColor: style.strokeColor,
       strokeOpacity: style.strokeOpacity,
       strokeWidth: style.strokeWidth,
+      useQdt: false,
+      visible: false,
     }
-  )
+  ) as MarblePathCurve
 }
 
 function createMarblePathElements(
   board: JXG.Board,
-  bounds: [number, number, number, number],
-  pathSpec: MarblePathSpec
+  style: MarblePathStyle
 ): MarblePathElements {
-  const { observation, style } = pathSpec
-  const gravity_mps2 = observation.blueprintRealization.gravity_mps2
+  return {
+    bounceArc: createMarblePathCurve(board, style),
+    boundsKey: "",
+    dropArc: createMarblePathCurve(board, style),
+    observation: null,
+    styleKey: "",
+  }
+}
 
+function updateMarblePathCurve(
+  curve: MarblePathCurve,
+  snapshot: Snapshot,
+  gravity_mps2: number,
+  endTime_s: number
+) {
+  const { xValues_m, yValues_m } = getProjectilePathPoints(
+    snapshot,
+    gravity_mps2,
+    endTime_s
+  )
+
+  curve.dataX.length = 0
+  curve.dataY.length = 0
+  curve.dataX.push(...xValues_m)
+  curve.dataY.push(...yValues_m)
+}
+
+function hideMarblePathElements(elements: MarblePathElements) {
+  elements.dropArc.setAttribute({ visible: false })
+  elements.bounceArc.setAttribute({ visible: false })
+  elements.observation = null
+  elements.styleKey = ""
+}
+
+function styleKey(style: MarblePathStyle) {
+  return [
+    style.dash ?? "",
+    style.strokeColor,
+    style.strokeOpacity ?? "",
+    style.strokeWidth,
+  ].join(":")
+}
+
+function boundsKey(bounds: [number, number, number, number]) {
+  return bounds.join(":")
+}
+
+function updateMarblePathStyle(
+  elements: MarblePathElements,
+  style: MarblePathStyle
+) {
+  const nextStyleKey = styleKey(style)
+
+  if (elements.styleKey === nextStyleKey) {
+    return
+  }
+
+  const attributes = {
+    dash: style.dash ?? 0,
+    highlightStrokeColor: style.strokeColor,
+    highlightStrokeOpacity: style.strokeOpacity,
+    highlightStrokeWidth: style.strokeWidth,
+    strokeColor: style.strokeColor,
+    strokeOpacity: style.strokeOpacity,
+    strokeWidth: style.strokeWidth,
+  }
+
+  elements.dropArc.setAttribute(attributes)
+  elements.bounceArc.setAttribute(attributes)
+  elements.styleKey = nextStyleKey
+}
+
+function updateMarblePathElements(
+  elements: MarblePathElements,
+  bounds: [number, number, number, number],
+  observation: Observation,
+  style: MarblePathStyle
+) {
+  if (!observation.valid) {
+    hideMarblePathElements(elements)
+    return
+  }
+
+  const gravity_mps2 = observation.blueprintRealization.gravity_mps2
   // Known flight time from drop to impact.
   const dropArcTime_s =
     observation.impactSnapshot.time_s - observation.dropSnapshot.time_s
@@ -370,32 +478,65 @@ function createMarblePathElements(
     bounds
   )
 
-  return {
-    dropArc: createMarblePathCurve(
-      board,
-      observation.dropSnapshot,
-      gravity_mps2,
-      dropArcTime_s,
-      style
-    ),
-    bounceArc: createMarblePathCurve(
-      board,
-      observation.bounceSnapshot,
-      gravity_mps2,
-      bounceArcTime_s,
-      style
-    ),
-  }
+  updateMarblePathStyle(elements, style)
+  updateMarblePathCurve(
+    elements.dropArc,
+    observation.dropSnapshot,
+    gravity_mps2,
+    dropArcTime_s
+  )
+  updateMarblePathCurve(
+    elements.bounceArc,
+    observation.bounceSnapshot,
+    gravity_mps2,
+    bounceArcTime_s
+  )
+  elements.dropArc.setAttribute({ visible: true })
+  elements.bounceArc.setAttribute({ visible: true })
+  elements.observation = observation
 }
 
-function createMarblePaths(
+function updateMarblePaths(
   board: JXG.Board,
+  existingPaths: MarblePathElements[],
   bounds: [number, number, number, number],
-  pathSpecs: MarblePathSpec[]
+  observations: Array<{
+    observation: Observation
+    style: MarblePathStyle
+  }>
 ): MarblePathElements[] {
-  return pathSpecs
-    .filter((pathSpec) => pathSpec.observation.valid)
-    .map((pathSpec) => createMarblePathElements(board, bounds, pathSpec))
+  const paths = [...existingPaths]
+  const nextBoundsKey = boundsKey(bounds)
+
+  for (let index = 0; index < observations.length; index += 1) {
+    const path =
+      paths[index] ?? createMarblePathElements(board, observations[index].style)
+
+    if (paths[index] === undefined) {
+      paths[index] = path
+    }
+
+    if (
+      path.observation !== observations[index].observation ||
+      path.boundsKey !== nextBoundsKey
+    ) {
+      updateMarblePathElements(
+        path,
+        bounds,
+        observations[index].observation,
+        observations[index].style
+      )
+      path.boundsKey = nextBoundsKey
+    } else {
+      updateMarblePathStyle(path, observations[index].style)
+    }
+  }
+
+  for (let index = observations.length; index < paths.length; index += 1) {
+    hideMarblePathElements(paths[index])
+  }
+
+  return paths
 }
 
 function removeSchematicElements(
@@ -413,18 +554,6 @@ function removeSchematicElements(
   ])
 }
 
-function removeMarblePaths(
-  board: JXG.Board,
-  elements: MarblePathElements[]
-) {
-  board.removeObject(
-    elements.flatMap((marblePath) => [
-      marblePath.dropArc,
-      marblePath.bounceArc,
-    ])
-  )
-}
-
 function updateSchematicElements(
   board: JXG.Board,
   elements: SchematicElements,
@@ -436,12 +565,12 @@ function updateSchematicElements(
   movePoint(elements.drumLineA, geometry.drumLineA)
   movePoint(elements.drumLineB, geometry.drumLineB)
   board.setBoundingBox(geometry.bounds, true)
-  board.update()
 }
 
 export function SchematicBoard({
   blueprint,
   nominalObservation,
+  nominalObservationStale,
   sampledObservations,
 }: SchematicBoardProps) {
   const boardId = `schematic-${useId().replaceAll(":", "")}`
@@ -547,8 +676,7 @@ export function SchematicBoard({
 
     if (blueprint === null) {
       if (marblePathsRef.current.length > 0) {
-        removeMarblePaths(board, marblePathsRef.current)
-        marblePathsRef.current = []
+        marblePathsRef.current.forEach(hideMarblePathElements)
       }
 
       if (elementsRef.current !== null) {
@@ -563,24 +691,24 @@ export function SchematicBoard({
 
     const geometry = getSchematicGeometry(blueprint)
 
+    board.suspendUpdate()
+
     if (elementsRef.current === null) {
       elementsRef.current = createSchematicElements(board, geometry, colors)
     }
 
     updateSchematicElements(board, elementsRef.current, geometry)
 
-    if (marblePathsRef.current.length > 0) {
-      removeMarblePaths(board, marblePathsRef.current)
-      marblePathsRef.current = []
-    }
-
-    const marblePathSpecs: MarblePathSpec[] =
+    const marblePathSpecs: Array<{
+      observation: Observation
+      style: MarblePathStyle
+    }> =
       nominalObservation === null
         ? sampledObservations.map((observation) => ({
             observation,
             style: {
               strokeColor: colors.primary,
-              strokeOpacity: 0.08,
+              strokeOpacity: nominalObservationStale ? 0.03 : 0.08,
               strokeWidth: 2,
             },
           }))
@@ -590,7 +718,7 @@ export function SchematicBoard({
               style: {
                 dash: 2,
                 strokeColor: colors.primary,
-                strokeOpacity: 1,
+                strokeOpacity: nominalObservationStale ? 0.25 : 1,
                 strokeWidth: 2,
               },
             },
@@ -598,22 +726,27 @@ export function SchematicBoard({
               observation,
               style: {
                 strokeColor: colors.primary,
-                strokeOpacity: 0.08,
+                strokeOpacity: nominalObservationStale ? 0.03 : 0.08,
                 strokeWidth: 2,
               },
             })),
           ]
 
-    marblePathsRef.current = createMarblePaths(
+    marblePathsRef.current = updateMarblePaths(
       board,
+      marblePathsRef.current,
       geometry.bounds,
       marblePathSpecs
     )
 
-    if (marblePathsRef.current.length > 0) {
-      board.update()
-    }
-  }, [blueprint, nominalObservation, sampledObservations, renderedTheme])
+    board.unsuspendUpdate()
+  }, [
+    blueprint,
+    nominalObservation,
+    nominalObservationStale,
+    sampledObservations,
+    renderedTheme,
+  ])
 
   return (
     <div
