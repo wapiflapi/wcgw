@@ -15,7 +15,7 @@ const MODEL_INPUT_HASH_ALIASES = {
   chuteBendEnabled: "cbe",
   chuteBendRadius_m: "cbr",
   chuteEntryLength_ratio: "clr",
-  chuteExitAngle_rad: "cxa",
+  chuteBendAngle_rad: "cba",
   drumTiltAngle_rad: "dt",
   drumPivotArmLength_m: "dpa",
   drumPivotAngleRange_rad: "dpr",

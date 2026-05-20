@@ -36,7 +36,7 @@ const MAIN_BLUEPRINT_KEYS = new Set<keyof Blueprint>([
   "chuteEntryLength_m",
   "chuteBendEnabled",
   "chuteBendRadius_m",
-  "chuteExitAngle_rad",
+  "chuteBendAngle_rad",
   "chuteExitLength_m",
   "releasePoint_x_m",
   "releasePoint_y_m",
@@ -166,8 +166,8 @@ function blueprintEntries(blueprint: Blueprint): BlueprintItem[] {
             0
           ),
           formatScalarItem(
-            "Exit angle",
-            blueprint.chuteExitAngle_rad,
+            "Bend angle",
+            blueprint.chuteBendAngle_rad,
             "deg",
             radToDeg,
             1
@@ -213,9 +213,9 @@ function remainingBlueprintEntries(blueprint: Blueprint): BlueprintItem[] {
           mToMm,
           0
         ),
-        chuteExitAngle_rad: formatScalarItem(
-          "Exit angle",
-          blueprint.chuteExitAngle_rad,
+        chuteBendAngle_rad: formatScalarItem(
+          "Bend angle",
+          blueprint.chuteBendAngle_rad,
           "deg",
           radToDeg
         ),

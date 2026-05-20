@@ -29,7 +29,7 @@ It is not a substitute for testing hardware.
 | --- | --- |
 | [`src/model/solve`](src/model/solve) | Solves the nominal blueprint. Straight and bent chute solvers share the same harness and return solved chute lengths plus the release point that should work on paper. |
 | [`src/model/solve/straight.ts`](src/model/solve/straight.ts) | Closed-form straight chute launch solve. |
-| [`src/model/solve/bend.ts`](src/model/solve/bend.ts) | Bent chute launch solve for entry angle, exit angle, bend radius, and bend position. It solves one scalar unknown, flight time, and derives the rest of the geometry. |
+| [`src/model/solve/bend.ts`](src/model/solve/bend.ts) | Bent chute launch solve for entry angle, bend angle, bend radius, and bend position. It solves one scalar unknown, flight time, and derives the rest of the geometry. |
 | [`src/model/simulation.ts`](src/model/simulation.ts) | Simulates one realized straight-chute blueprint through release, chute motion, flight, impact, and bounce. Bent chute simulation is intentionally disabled for now. |
 | [`src/model/realization.ts`](src/model/realization.ts) | Samples a blueprint within its tolerances. |
 | [`src/model/aggregation.ts`](src/model/aggregation.ts) | Reduces many observations into summary stats and representative cases. |

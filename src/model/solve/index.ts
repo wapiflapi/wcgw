@@ -111,8 +111,8 @@ export function solveBlueprint(input: ModelInput): SolveResult<Blueprint> {
         input.chuteBendRadius_m,
         manufacturingLinearTolerance_m
       ),
-      chuteExitAngle_rad: blueprintSolvedValue(
-        input.chuteExitAngle_rad,
+      chuteBendAngle_rad: blueprintSolvedValue(
+        input.chuteBendAngle_rad,
         manufacturingAngleTolerance_rad
       ),
       chuteEntryLength_m: blueprintSolvedValue(

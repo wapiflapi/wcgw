@@ -184,15 +184,16 @@ export function DesignPanel({
     -90,
     0
   )
-  const minimumBendExitAngle_deg = Math.min(0, bendEntryAngle_deg + 1)
-  const bendExitAngle_deg = Math.max(
-    minimumBendExitAngle_deg,
-    radToDeg(modelInput.chuteExitAngle_rad)
+  const maximumBendAngle_deg = Math.max(0, -bendEntryAngle_deg)
+  const bendAngle_deg = clamp(
+    radToDeg(modelInput.chuteBendAngle_rad),
+    0,
+    maximumBendAngle_deg
   )
   const normalizedBendModelInput = {
     chuteBendRadius_m: normalizedBendRadius_m,
     chuteEntryAngle_rad: degToModelRad(bendEntryAngle_deg),
-    chuteExitAngle_rad: degToModelRad(bendExitAngle_deg),
+    chuteBendAngle_rad: degToModelRad(bendAngle_deg),
   }
   const expectedMarbleMass_g = getSphereMass_g(
     modelInput.marbleDiameter_m,
@@ -243,7 +244,8 @@ export function DesignPanel({
         normalizedBendModelInput.chuteBendRadius_m &&
       modelInput.chuteEntryAngle_rad ===
         normalizedBendModelInput.chuteEntryAngle_rad &&
-      modelInput.chuteExitAngle_rad === normalizedBendModelInput.chuteExitAngle_rad
+      modelInput.chuteBendAngle_rad ===
+        normalizedBendModelInput.chuteBendAngle_rad
     ) {
       return
     }
@@ -433,10 +435,8 @@ export function DesignPanel({
                           ),
                           minimumChuteBendRadiusBound_m
                         ),
-                        chuteEntryAngle_rad: degToModelRad(
-                          bendEntryAngle_deg
-                        ),
-                        chuteExitAngle_rad: degToModelRad(bendExitAngle_deg),
+                        chuteEntryAngle_rad: degToModelRad(bendEntryAngle_deg),
+                        chuteBendAngle_rad: degToModelRad(bendAngle_deg),
                       }
                     : {}),
                 })
@@ -485,14 +485,14 @@ export function DesignPanel({
                     step={1}
                     inverted
                     onChange={(angle_deg) => {
-                      const minimumExitAngle_deg = Math.min(0, angle_deg + 1)
-
+                      const nextMaximumBendAngle_deg = Math.max(0, -angle_deg)
                       updateInputs({
                         chuteEntryAngle_rad: degToModelRad(angle_deg),
-                        chuteExitAngle_rad: degToModelRad(
-                          Math.max(
-                            minimumExitAngle_deg,
-                            radToDeg(modelInput.chuteExitAngle_rad)
+                        chuteBendAngle_rad: degToModelRad(
+                          clamp(
+                            radToDeg(modelInput.chuteBendAngle_rad),
+                            0,
+                            nextMaximumBendAngle_deg
                           )
                         ),
                       })
@@ -531,24 +531,21 @@ export function DesignPanel({
                     }}
                   />
                   <SliderField
-                    id="chuteExitAngle_deg"
+                    id="chuteBendAngle_deg"
                     label={
-                      <InfoLabel why="Sets the chute direction after the bend and aims the marble toward the drum.">
-                        Exit angle
+                      <InfoLabel why="Sets how far the bend turns from the entry direction toward a flatter launch. Smaller values look closer to a straight chute.">
+                        Bend angle
                       </InfoLabel>
                     }
                     unit="deg"
-                    value={bendExitAngle_deg}
-                    min={minimumBendExitAngle_deg}
-                    max={0}
+                    value={bendAngle_deg}
+                    min={0}
+                    max={maximumBendAngle_deg}
                     step={1}
-                    inverted
                     onChange={(angle_deg) => {
                       updateInput(
-                        "chuteExitAngle_rad",
-                        degToModelRad(
-                          Math.max(minimumBendExitAngle_deg, angle_deg)
-                        )
+                        "chuteBendAngle_rad",
+                        degToModelRad(clamp(angle_deg, 0, maximumBendAngle_deg))
                       )
                     }}
                   />

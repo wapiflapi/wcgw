@@ -9,11 +9,11 @@ export const defaultModelInput: ModelInput = {
   targetReleaseToImpactTimeTolerance_s: 0.005,
   targetNormalImpactSpeed_mps: 2.426,
 
-  chuteEntryAngle_rad: degToModelRad(-40),
+  chuteEntryAngle_rad: degToModelRad(-50),
   chuteBendEnabled: false,
   chuteBendRadius_m: 0.3,
   chuteEntryLength_ratio: 0.5,
-  chuteExitAngle_rad: degToModelRad(-40),
+  chuteBendAngle_rad: degToModelRad(20),
   drumTiltAngle_rad: degToModelRad(-10),
   drumPivotArmLength_m: 0.5,
   drumPivotAngleRange_rad: degToModelRad(5),

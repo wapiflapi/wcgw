@@ -205,11 +205,11 @@ function getSchematicGeometry(blueprint: Blueprint): SchematicGeometry {
 
 function getChutePathGeometry(blueprint: Blueprint): ChutePathGeometry {
   const entryAngle_rad = blueprint.chuteEntryAngle_rad.nominal
-  const exitAngle_rad = blueprint.chuteExitAngle_rad.nominal
+  const bendAngle_rad = blueprint.chuteBendAngle_rad.nominal
+  const exitAngle_rad = entryAngle_rad + bendAngle_rad
   const entryLength_m = blueprint.chuteEntryLength_m.nominal
   const exitLength_m = blueprint.chuteExitLength_m.nominal
   const bendRadius_m = blueprint.chuteBendRadius_m.nominal
-  const bendAngle_rad = exitAngle_rad - entryAngle_rad
   const entryStart = {
     x_m: blueprint.releasePoint_x_m.nominal,
     y_m: blueprint.releasePoint_y_m.nominal,
@@ -321,10 +321,8 @@ function getBendCurvePoints({
   for (let index = 0; index < CHUTE_BEND_POINT_COUNT; index += 1) {
     const progress = index / (CHUTE_BEND_POINT_COUNT - 1)
     const angle_rad = entryAngle_rad + progress * bendAngle_rad
-    const bendDx_m =
-      radius_m * (Math.sin(angle_rad) - Math.sin(entryAngle_rad))
-    const bendDy_m =
-      radius_m * (Math.cos(entryAngle_rad) - Math.cos(angle_rad))
+    const bendDx_m = radius_m * (Math.sin(angle_rad) - Math.sin(entryAngle_rad))
+    const bendDy_m = radius_m * (Math.cos(entryAngle_rad) - Math.cos(angle_rad))
 
     points.push({
       x_m: entryEnd.x_m + bendDx_m,
@@ -332,7 +330,7 @@ function getBendCurvePoints({
     })
   }
 
-  // Keep the final point exactly aligned with the exit angle inputs. The
+  // Keep the final point exactly aligned with the derived exit angle. The
   // sampled curve normally lands here already; this removes tiny drift.
   const lastPoint = points[points.length - 1]
   if (lastPoint !== undefined) {
@@ -420,17 +418,13 @@ function createChuteElements(
     strokeColor: colors.primary,
     strokeWidth: 3,
   })
-  const bendArc = board.create(
-    "arc",
-    [bendCenter, entryEnd, exitStart],
-    {
-      fixed: true,
-      highlightStrokeColor: colors.primary,
-      strokeColor: colors.primary,
-      strokeWidth: 3,
-      visible: chutePath.bendVisible,
-    }
-  )
+  const bendArc = board.create("arc", [bendCenter, entryEnd, exitStart], {
+    fixed: true,
+    highlightStrokeColor: colors.primary,
+    strokeColor: colors.primary,
+    strokeWidth: 3,
+    visible: chutePath.bendVisible,
+  })
   const exitSegment = board.create("segment", [exitStart, exitEnd], {
     fixed: true,
     highlightStrokeColor: colors.primary,
@@ -827,8 +821,7 @@ function updateChuteElements(
       distanceBetweenPoints_m(
         chutePath.exitSegment.start,
         chutePath.exitSegment.end
-      ) >
-        Number.EPSILON,
+      ) > Number.EPSILON,
   })
 }
 

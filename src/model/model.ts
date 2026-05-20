@@ -16,7 +16,7 @@ export type ModelInput = {
   chuteBendEnabled: boolean
   chuteBendRadius_m: number
   chuteEntryLength_ratio: number
-  chuteExitAngle_rad: number
+  chuteBendAngle_rad: number
   drumTiltAngle_rad: number
   drumPivotArmLength_m: number
   drumPivotAngleRange_rad: number
@@ -55,7 +55,7 @@ export type Blueprint = {
   chuteEntryLength_m: BlueprintValue
   chuteBendEnabled: boolean
   chuteBendRadius_m: BlueprintValue
-  chuteExitAngle_rad: BlueprintValue
+  chuteBendAngle_rad: BlueprintValue
   chuteExitLength_m: BlueprintValue
   releasePoint_x_m: BlueprintValue
   releasePoint_y_m: BlueprintValue

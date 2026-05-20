@@ -47,11 +47,11 @@ export function solveBendChuteLaunchGeometry(
   // Chute entry angle, measured from horizontal, positive counterclockwise.
   const entryAngle_rad = input.chuteEntryAngle_rad
 
-  // Chute exit angle after the bend.
-  const exitAngle_rad = input.chuteExitAngle_rad
+  // How much the chute turns from entry toward the flatter exit direction.
+  const bendAngle_rad = input.chuteBendAngle_rad
 
-  // Bend mode always eases from a steeper entry angle to a flatter exit angle.
-  const bendAngle_rad = exitAngle_rad - entryAngle_rad
+  // Chute exit angle after the bend. This is derived, not user-authored.
+  const exitAngle_rad = entryAngle_rad + bendAngle_rad
 
   // Bend radius, controlled by the artist-facing "bend size".
   const bendRadius_m = input.chuteBendRadius_m
@@ -339,8 +339,7 @@ function getBendTime_s(setup: BendSolveSetup, entrySpeed_mps: number) {
     const progress = index / SIMPSON_INTERVAL_COUNT
 
     // Local chute angle partway through the bend.
-    const angle_rad =
-      setup.entryAngle_rad + progress * setup.bendAngle_rad
+    const angle_rad = setup.entryAngle_rad + progress * setup.bendAngle_rad
 
     // Vertical displacement from bend start to this sample point.
     const partialBendDy_m =
@@ -430,7 +429,7 @@ function chooseFlightTimeCandidate(
   if (alwaysTooSlow) {
     return {
       reason:
-        "Chute is too slow for the target time.\nMake the entry or exit angle steeper, or move the bend position to give the marble a faster path.",
+        "Chute is too slow for the target time.\nMake the entry angle steeper, reduce the bend angle, or move the bend position to give the marble a faster path.",
       type: "not-found",
     }
   }
@@ -438,14 +437,14 @@ function chooseFlightTimeCandidate(
   if (alwaysTooFast) {
     return {
       reason:
-        "Chute is too fast for the target time.\nMake the entry or exit angle gentler, increase the bend size, or move the bend position to soften the path.",
+        "Chute is too fast for the target time.\nMake the entry angle gentler, increase the bend angle, increase the bend size, or move the bend position to soften the path.",
       type: "not-found",
     }
   }
 
   return {
     reason:
-      "Chute setup needs adjustment.\nThis bend has a gap in the valid solve range. Nudge the bend size, bend position, or exit angle and try again.",
+      "Chute setup needs adjustment.\nThis bend has a gap in the valid solve range. Nudge the bend size, bend position, or bend angle and try again.",
     type: "not-found",
   }
 }
@@ -533,6 +532,7 @@ function advanceConstantAcceleration(
 function getBendSetupInvalidReason({
   bendAngle_rad,
   bendRadius_m,
+  exitAngle_rad,
   entryLengthShare_ratio,
   normalExitAlignment,
   rollingGravityScale_mps2,
@@ -544,8 +544,12 @@ function getBendSetupInvalidReason({
     return "Bend size is too small.\nUse a positive bend size so the chute has room to turn."
   }
 
-  if (bendAngle_rad <= SOLVE_EPSILON) {
-    return "Exit angle needs to be flatter than entry angle.\nRaise the exit angle so the bend smooths from a steep entry into a flatter launch."
+  if (bendAngle_rad < -SOLVE_EPSILON) {
+    return "Bend angle cannot turn backward.\nUse a zero or positive bend angle so the chute either stays straight or smooths into a flatter launch."
+  }
+
+  if (exitAngle_rad > SOLVE_EPSILON) {
+    return "Bend angle is too large.\nReduce the bend angle so the chute still exits level or downhill."
   }
 
   if (entryLengthShare_ratio <= 0 || entryLengthShare_ratio >= 1) {
@@ -565,11 +569,11 @@ function getBendSetupInvalidReason({
   }
 
   if (straightDropPerLength_m <= 0) {
-    return "The chute is not downhill enough.\nLower the entry angle or exit angle so the marble can gain speed before it leaves the chute."
+    return "The chute is not downhill enough.\nLower the entry angle or reduce the bend angle so the marble can gain speed before it leaves the chute."
   }
 
   if (normalExitAlignment <= SOLVE_EPSILON) {
-    return "Exit angle misses the drum face.\nRotate the exit angle toward the drum surface so the launch has useful punch."
+    return "Bend angle points the launch away from the drum.\nAdjust the bend angle so the chute exits toward the drum surface."
   }
 
   return null
