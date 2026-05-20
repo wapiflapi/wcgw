@@ -14,8 +14,8 @@ export type ModelInput = {
 
   chuteEntryAngle_rad: number
   chuteBendEnabled: boolean
+  chuteEntryLength_m: number
   chuteBendRadius_m: number
-  chuteEntryLength_ratio: number
   chuteBendAngle_rad: number
   drumTiltAngle_rad: number
   drumPivotArmLength_m: number

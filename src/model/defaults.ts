@@ -11,9 +11,9 @@ export const defaultModelInput: ModelInput = {
 
   chuteEntryAngle_rad: degToModelRad(-50),
   chuteBendEnabled: false,
-  chuteBendRadius_m: 0.3,
-  chuteEntryLength_ratio: 0.5,
-  chuteBendAngle_rad: degToModelRad(20),
+  chuteEntryLength_m: 0,
+  chuteBendRadius_m: 0.075,
+  chuteBendAngle_rad: degToModelRad(0),
   drumTiltAngle_rad: degToModelRad(-10),
   drumPivotArmLength_m: 0.5,
   drumPivotAngleRange_rad: degToModelRad(5),

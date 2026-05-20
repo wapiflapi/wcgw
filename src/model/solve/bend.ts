@@ -9,10 +9,11 @@ import type { ChuteLaunchGeometry, DrumGeometry } from "@/model/solve/types"
 
 type FlightTimeCandidate = {
   chuteTime_s: number
+  entryLength_m: number
+  exitLength_m: number
   exitSpeed_mps: number
   flightTime_s: number
   residual_s: number
-  totalStraightLength_m: number
 }
 
 type FlightTimeCandidateSearch =
@@ -21,16 +22,17 @@ type FlightTimeCandidateSearch =
 
 type BendSolveSetup = {
   bendAngle_rad: number
-  bendDrop_m: number
-  bendLength_m: number
   bendRadius_m: number
+  bendDropPerRadius_mpm: number
   entryAngle_rad: number
-  entryLengthShare_ratio: number
+  entryDrop_m: number
+  entryLength_m: number
   exitAngle_rad: number
+  exitDropPerMeter_mpm: number
   gravityInwardNormalAcceleration_mps2: number
+  isStraightEquivalent: boolean
   normalExitAlignment: number
   rollingGravityScale_mps2: number
-  straightDropPerLength_m: number
   targetNormalImpactSpeed_mps: number
   targetTotalTime_s: number
 }
@@ -50,14 +52,14 @@ export function solveBendChuteLaunchGeometry(
   // How much the chute turns from entry toward the flatter exit direction.
   const bendAngle_rad = input.chuteBendAngle_rad
 
+  // Radius of the circular bend.
+  const bendRadius_m = input.chuteBendRadius_m
+
   // Chute exit angle after the bend. This is derived, not user-authored.
   const exitAngle_rad = entryAngle_rad + bendAngle_rad
 
-  // Bend radius, controlled by the artist-facing "bend size".
-  const bendRadius_m = input.chuteBendRadius_m
-
-  // Fraction of straight chute before the bend.
-  const entryLengthShare_ratio = input.chuteEntryLength_ratio
+  // Straight chute length before the bend.
+  const entryLength_m = input.chuteEntryLength_m
 
   // Chute energy efficiency, where 1 means no rolling loss.
   const chuteEnergyEfficiency_ratio = input.chuteEnergyEfficiency_ratio
@@ -111,37 +113,34 @@ export function solveBendChuteLaunchGeometry(
     drumNormal
   )
 
-  // Vertical displacement of the circular bend.
-  const bendDy_m = getBendVerticalDisplacement_m({
-    bendRadius_m,
-    entryAngle_rad,
-    exitAngle_rad,
-  })
+  // Fixed vertical drop through the entry chute run.
+  const entryDrop_m = -entryLength_m * Math.sin(entryAngle_rad)
 
-  // Positive vertical drop through the bend. Downhill bends add speed.
-  const bendDrop_m = -bendDy_m
+  // Vertical drop per meter of solved exit run.
+  const exitDropPerMeter_mpm = -Math.sin(exitAngle_rad)
 
-  // Chute length along the curved bend.
-  const bendLength_m = bendRadius_m * bendAngle_rad
+  // Bend drop per meter of bend radius.
+  const bendDropPerRadius_mpm =
+    Math.cos(exitAngle_rad) - Math.cos(entryAngle_rad)
 
-  // Drop per meter of straight chute, after the entry/exit split.
-  const straightDropPerLength_m = -(
-    entryLengthShare_ratio * Math.sin(entryAngle_rad) +
-    (1 - entryLengthShare_ratio) * Math.sin(exitAngle_rad)
-  )
+  // At zero bend angle, bend mode is just a straight chute split into an entry
+  // run plus a solved exit run. Keep the same solve path so the UI can slide
+  // smoothly into and out of a visible bend.
+  const isStraightEquivalent = bendAngle_rad <= SOLVE_EPSILON
 
   const setup: BendSolveSetup = {
     bendAngle_rad,
-    bendDrop_m,
-    bendLength_m,
     bendRadius_m,
+    bendDropPerRadius_mpm,
     entryAngle_rad,
-    entryLengthShare_ratio,
+    entryDrop_m,
+    entryLength_m,
     exitAngle_rad,
+    exitDropPerMeter_mpm,
     gravityInwardNormalAcceleration_mps2,
+    isStraightEquivalent,
     normalExitAlignment,
     rollingGravityScale_mps2,
-    straightDropPerLength_m,
     targetNormalImpactSpeed_mps,
     targetTotalTime_s,
   }
@@ -152,9 +151,9 @@ export function solveBendChuteLaunchGeometry(
     return invalidSolve(invalidReason)
   }
 
-  // The one unknown we solve numerically is ballistic flight time.
-  // For each trial time, impact punch gives exit speed, exit speed gives drop,
-  // and drop gives the required entry/exit chute lengths.
+  // The one unknown we solve numerically is ballistic flight time. For each
+  // trial time, impact punch gives exit speed, exit speed gives total required
+  // drop, and the remaining drop tells us the exit run length.
   const candidateSearch = chooseFlightTimeCandidate(setup)
 
   if (candidateSearch.type === "not-found") {
@@ -181,13 +180,6 @@ export function solveBendChuteLaunchGeometry(
     ballisticGravityDisplacement_m
   )
 
-  // Straight chute length before the bend.
-  const entryLength_m = entryLengthShare_ratio * candidate.totalStraightLength_m
-
-  // Straight chute length after the bend.
-  const exitLength_m =
-    (1 - entryLengthShare_ratio) * candidate.totalStraightLength_m
-
   // Unit direction along the entry chute.
   const entryDirection = {
     x: Math.cos(entryAngle_rad),
@@ -195,18 +187,17 @@ export function solveBendChuteLaunchGeometry(
   }
 
   // Displacement across the first straight chute segment.
-  const entryDisplacement_m = scaleVector2(entryDirection, entryLength_m)
+  const entryDisplacement_m = scaleVector2(entryDirection, setup.entryLength_m)
 
   // Displacement across the circular bend.
   const bendDisplacement_m = getBendDisplacement_m({
-    bendDy_m,
     bendRadius_m,
     entryAngle_rad,
     exitAngle_rad,
   })
 
   // Displacement across the final straight chute segment.
-  const exitDisplacement_m = scaleVector2(exitDirection, exitLength_m)
+  const exitDisplacement_m = scaleVector2(exitDirection, candidate.exitLength_m)
 
   // Total displacement from release point to chute exit.
   const releaseToExitDisplacement_m = addVector2(
@@ -223,9 +214,10 @@ export function solveBendChuteLaunchGeometry(
   return {
     type: "valid",
     value: {
+      bendRadius_m,
       chuteBendEnabled: true,
-      entryLength_m,
-      exitLength_m,
+      entryLength_m: setup.entryLength_m,
+      exitLength_m: candidate.exitLength_m,
       releasePoint_x_m: releasePoint_m.x,
       releasePoint_y_m: releasePoint_m.y,
     },
@@ -254,21 +246,42 @@ function evaluateFlightTimeCandidate(
   const requiredDrop_m =
     exitSpeed_mps ** 2 / (2 * setup.rollingGravityScale_mps2)
 
-  // The bend contributes fixed drop; the straight pieces supply the rest.
-  const totalStraightLength_m =
-    (requiredDrop_m - setup.bendDrop_m) / setup.straightDropPerLength_m
+  // The entry run and bend radius are fixed by the designer. The exit run
+  // supplies the remaining drop.
+  const fixedDrop_m = getFixedDrop_m(setup)
+  const requiredExitDrop_m = requiredDrop_m - fixedDrop_m
 
-  if (!Number.isFinite(totalStraightLength_m) || totalStraightLength_m < 0) {
+  if (
+    !Number.isFinite(requiredExitDrop_m) ||
+    requiredExitDrop_m < -SOLVE_EPSILON
+  ) {
     return null
   }
 
-  // Straight chute length before the bend.
-  const entryLength_m = setup.entryLengthShare_ratio * totalStraightLength_m
-
-  // Straight chute length after the bend.
   const exitLength_m =
-    (1 - setup.entryLengthShare_ratio) * totalStraightLength_m
+    Math.max(0, requiredExitDrop_m) / setup.exitDropPerMeter_mpm
 
+  if (!Number.isFinite(exitLength_m) || exitLength_m < 0) {
+    return null
+  }
+
+  const timing = getChuteTiming(setup, exitLength_m)
+
+  if (timing === null) {
+    return null
+  }
+
+  return {
+    chuteTime_s: timing.chuteTime_s,
+    entryLength_m: setup.entryLength_m,
+    exitLength_m,
+    exitSpeed_mps,
+    flightTime_s,
+    residual_s: timing.chuteTime_s + flightTime_s - setup.targetTotalTime_s,
+  }
+}
+
+function getChuteTiming(setup: BendSolveSetup, exitLength_m: number) {
   // Rolling acceleration along the entry chute.
   const entryAcceleration_mps2 =
     setup.rollingGravityScale_mps2 * -Math.sin(setup.entryAngle_rad)
@@ -280,7 +293,7 @@ function evaluateFlightTimeCandidate(
   // Speed and time after the entry segment, starting from rest.
   const entryResult = advanceConstantAcceleration(
     0,
-    entryLength_m,
+    setup.entryLength_m,
     entryAcceleration_mps2
   )
 
@@ -289,9 +302,11 @@ function evaluateFlightTimeCandidate(
   }
 
   // Speed after the bend, using the bend's vertical drop.
+  const bendDrop_m = setup.isStraightEquivalent
+    ? 0
+    : setup.bendRadius_m * setup.bendDropPerRadius_mpm
   const bendExitSpeedSquared_m2ps2 =
-    entryResult.speed_mps ** 2 +
-    2 * setup.rollingGravityScale_mps2 * setup.bendDrop_m
+    entryResult.speed_mps ** 2 + 2 * setup.rollingGravityScale_mps2 * bendDrop_m
 
   if (bendExitSpeedSquared_m2ps2 < 0) {
     return null
@@ -300,7 +315,11 @@ function evaluateFlightTimeCandidate(
   const bendExitSpeed_mps = Math.sqrt(bendExitSpeedSquared_m2ps2)
 
   // Time spent inside the curved bend.
-  const bendTime_s = getBendTime_s(setup, entryResult.speed_mps)
+  const bendTime_s = getBendTime_s(
+    setup,
+    setup.bendRadius_m,
+    entryResult.speed_mps
+  )
 
   if (!Number.isFinite(bendTime_s)) {
     return null
@@ -317,20 +336,32 @@ function evaluateFlightTimeCandidate(
     return null
   }
 
-  const chuteTime_s = entryResult.time_s + bendTime_s + exitResult.time_s
-
   return {
-    chuteTime_s,
-    exitSpeed_mps,
-    flightTime_s,
-    residual_s: chuteTime_s + flightTime_s - setup.targetTotalTime_s,
-    totalStraightLength_m,
+    chuteTime_s: entryResult.time_s + bendTime_s + exitResult.time_s,
   }
 }
 
-function getBendTime_s(setup: BendSolveSetup, entrySpeed_mps: number) {
-  if (setup.bendLength_m <= SOLVE_EPSILON) {
+function getBendTime_s(
+  setup: BendSolveSetup,
+  bendRadius_m: number,
+  entrySpeed_mps: number
+) {
+  const bendLength_m = bendRadius_m * setup.bendAngle_rad
+
+  if (bendLength_m <= SOLVE_EPSILON) {
     return 0
+  }
+
+  if (entrySpeed_mps <= SOLVE_EPSILON) {
+    const bendDrop_m = bendRadius_m * setup.bendDropPerRadius_mpm
+    const bendExitSpeedSquared_m2ps2 =
+      2 * setup.rollingGravityScale_mps2 * bendDrop_m
+
+    if (bendExitSpeedSquared_m2ps2 <= 0) {
+      return Number.NaN
+    }
+
+    return (2 * bendLength_m) / Math.sqrt(bendExitSpeedSquared_m2ps2)
   }
 
   let weightedIntegral = 0
@@ -341,13 +372,9 @@ function getBendTime_s(setup: BendSolveSetup, entrySpeed_mps: number) {
     // Local chute angle partway through the bend.
     const angle_rad = setup.entryAngle_rad + progress * setup.bendAngle_rad
 
-    // Vertical displacement from bend start to this sample point.
-    const partialBendDy_m =
-      setup.bendRadius_m *
-      (Math.cos(setup.entryAngle_rad) - Math.cos(angle_rad))
-
     // Positive vertical drop from bend start to this sample point.
-    const partialBendDrop_m = -partialBendDy_m
+    const partialBendDrop_m =
+      bendRadius_m * (Math.cos(angle_rad) - Math.cos(setup.entryAngle_rad))
 
     // Speed at this sample point from energy.
     const speedSquared_m2ps2 =
@@ -368,7 +395,15 @@ function getBendTime_s(setup: BendSolveSetup, entrySpeed_mps: number) {
     weightedIntegral += simpsonWeight / Math.sqrt(speedSquared_m2ps2)
   }
 
-  return (setup.bendLength_m * weightedIntegral) / (3 * SIMPSON_INTERVAL_COUNT)
+  return (bendLength_m * weightedIntegral) / (3 * SIMPSON_INTERVAL_COUNT)
+}
+
+function getFixedDrop_m(setup: BendSolveSetup) {
+  const bendDrop_m = setup.isStraightEquivalent
+    ? 0
+    : setup.bendRadius_m * setup.bendDropPerRadius_mpm
+
+  return setup.entryDrop_m + bendDrop_m
 }
 
 function chooseFlightTimeCandidate(
@@ -378,9 +413,9 @@ function chooseFlightTimeCandidate(
   let sawValidCandidate = false
   let alwaysTooSlow = true
   let alwaysTooFast = true
+  const flightTimes_s = getCandidateFlightTimes_s(setup)
 
-  for (let sample = 1; sample < ROOT_SAMPLE_COUNT; sample += 1) {
-    const flightTime_s = (setup.targetTotalTime_s * sample) / ROOT_SAMPLE_COUNT
+  for (const flightTime_s of flightTimes_s) {
     const candidate = evaluateFlightTimeCandidate(setup, flightTime_s)
 
     if (candidate === null) {
@@ -401,7 +436,7 @@ function chooseFlightTimeCandidate(
       if (bisectionCandidate === null) {
         return {
           reason:
-            "Chute setup needs adjustment.\nThis bend is right on a solve edge. Nudge the bend size or bend position slightly and try again.",
+            "Chute setup needs adjustment.\nThis bend is right on a solve edge. Nudge the entry run, bend size, or bend angle slightly.",
           type: "not-found",
         }
       }
@@ -421,7 +456,7 @@ function chooseFlightTimeCandidate(
   if (!sawValidCandidate) {
     return {
       reason:
-        "Chute setup needs adjustment.\nThis bend cannot make a valid launch with the current angles. Aim the exit more toward the drum and keep the chute sloping downhill.",
+        "Chute setup needs adjustment.\nThis bend cannot make a valid launch with the current entry run, bend size, and angles. Keep the chute sloping downhill or use a gentler bend.",
       type: "not-found",
     }
   }
@@ -429,7 +464,7 @@ function chooseFlightTimeCandidate(
   if (alwaysTooSlow) {
     return {
       reason:
-        "Chute is too slow for the target time.\nMake the entry angle steeper, reduce the bend angle, or move the bend position to give the marble a faster path.",
+        "Chute is too slow for the target time.\nMake the entry angle steeper, shorten the entry run, reduce the bend size, or reduce the bend angle to give the marble a faster path.",
       type: "not-found",
     }
   }
@@ -437,16 +472,67 @@ function chooseFlightTimeCandidate(
   if (alwaysTooFast) {
     return {
       reason:
-        "Chute is too fast for the target time.\nMake the entry angle gentler, increase the bend angle, increase the bend size, or move the bend position to soften the path.",
+        "Chute is too fast for the target time.\nMake the entry angle gentler, lengthen the entry run, increase the bend size, or increase the bend angle to soften the path.",
       type: "not-found",
     }
   }
 
   return {
     reason:
-      "Chute setup needs adjustment.\nThis bend has a gap in the valid solve range. Nudge the bend size, bend position, or bend angle and try again.",
+      "Chute setup needs adjustment.\nThis bend has a gap in the valid solve range. Nudge the entry run, bend size, or bend angle.",
     type: "not-found",
   }
+}
+
+function getCandidateFlightTimes_s(setup: BendSolveSetup) {
+  const flightTimes_s: number[] = []
+
+  for (let sample = 1; sample < ROOT_SAMPLE_COUNT; sample += 1) {
+    flightTimes_s.push((setup.targetTotalTime_s * sample) / ROOT_SAMPLE_COUNT)
+  }
+
+  const maximumValidFlightTime_s = getMaximumValidFlightTime_s(setup)
+
+  if (
+    Number.isFinite(maximumValidFlightTime_s) &&
+    maximumValidFlightTime_s > 0 &&
+    maximumValidFlightTime_s < setup.targetTotalTime_s
+  ) {
+    flightTimes_s.push(maximumValidFlightTime_s)
+  }
+
+  return flightTimes_s
+    .sort((a, b) => a - b)
+    .filter((flightTime_s, index, sortedFlightTimes_s) => {
+      return (
+        index === 0 ||
+        Math.abs(flightTime_s - sortedFlightTimes_s[index - 1]) > SOLVE_EPSILON
+      )
+    })
+}
+
+function getMaximumValidFlightTime_s(setup: BendSolveSetup) {
+  if (setup.gravityInwardNormalAcceleration_mps2 <= SOLVE_EPSILON) {
+    return setup.targetTotalTime_s
+  }
+
+  const fixedDrop_m = getFixedDrop_m(setup)
+  const minimumExitSpeed_mps = Math.sqrt(
+    Math.max(0, 2 * setup.rollingGravityScale_mps2 * fixedDrop_m)
+  )
+  const fixedDropBoundaryFlightTime_s =
+    (setup.targetNormalImpactSpeed_mps -
+      setup.normalExitAlignment * minimumExitSpeed_mps) /
+    setup.gravityInwardNormalAcceleration_mps2
+  const positiveExitSpeedBoundaryFlightTime_s =
+    setup.targetNormalImpactSpeed_mps /
+    setup.gravityInwardNormalAcceleration_mps2
+
+  return Math.min(
+    setup.targetTotalTime_s,
+    fixedDropBoundaryFlightTime_s,
+    positiveExitSpeedBoundaryFlightTime_s
+  )
 }
 
 function bisectFlightTimeCandidate(
@@ -532,28 +618,39 @@ function advanceConstantAcceleration(
 function getBendSetupInvalidReason({
   bendAngle_rad,
   bendRadius_m,
+  bendDropPerRadius_mpm,
+  entryLength_m,
   exitAngle_rad,
-  entryLengthShare_ratio,
+  exitDropPerMeter_mpm,
+  isStraightEquivalent,
   normalExitAlignment,
   rollingGravityScale_mps2,
-  straightDropPerLength_m,
   targetNormalImpactSpeed_mps,
   targetTotalTime_s,
 }: BendSolveSetup) {
-  if (bendRadius_m <= 0) {
-    return "Bend size is too small.\nUse a positive bend size so the chute has room to turn."
+  if (
+    !Number.isFinite(bendRadius_m) ||
+    !Number.isFinite(entryLength_m) ||
+    bendRadius_m <= 0 ||
+    entryLength_m < 0
+  ) {
+    return "Chute dimensions need adjustment.\nUse a zero or positive entry run and a positive bend size."
   }
 
   if (bendAngle_rad < -SOLVE_EPSILON) {
-    return "Bend angle cannot turn backward.\nUse a zero or positive bend angle so the chute either stays straight or smooths into a flatter launch."
+    return "Bend angle cannot turn backward.\nUse zero or a positive bend angle so the chute either stays straight or smooths into a flatter launch."
+  }
+
+  if (!isStraightEquivalent && bendDropPerRadius_mpm <= SOLVE_EPSILON) {
+    return "Bend angle does not add downhill drop.\nUse a bend angle that keeps the chute turning through a downhill path."
+  }
+
+  if (exitDropPerMeter_mpm <= SOLVE_EPSILON) {
+    return "Exit angle needs downhill slope.\nReduce the bend angle so the solved exit run can keep accelerating the marble."
   }
 
   if (exitAngle_rad > SOLVE_EPSILON) {
     return "Bend angle is too large.\nReduce the bend angle so the chute still exits level or downhill."
-  }
-
-  if (entryLengthShare_ratio <= 0 || entryLengthShare_ratio >= 1) {
-    return "Bend position is too close to an end.\nMove bend position away from the end so the chute has both an entry and exit length."
   }
 
   if (targetTotalTime_s <= 0) {
@@ -566,10 +663,6 @@ function getBendSetupInvalidReason({
 
   if (rollingGravityScale_mps2 <= 0) {
     return "The chute has no usable acceleration.\nCheck gravity, rolling inertia, and chute efficiency; they need to leave the marble some downhill acceleration."
-  }
-
-  if (straightDropPerLength_m <= 0) {
-    return "The chute is not downhill enough.\nLower the entry angle or reduce the bend angle so the marble can gain speed before it leaves the chute."
   }
 
   if (normalExitAlignment <= SOLVE_EPSILON) {
@@ -586,32 +679,18 @@ function invalidSolve(reason: string): SolveResult<ChuteLaunchGeometry> {
   }
 }
 
-function getBendVerticalDisplacement_m({
-  bendRadius_m,
-  entryAngle_rad,
-  exitAngle_rad,
-}: {
-  bendRadius_m: number
-  entryAngle_rad: number
-  exitAngle_rad: number
-}) {
-  return bendRadius_m * (Math.cos(entryAngle_rad) - Math.cos(exitAngle_rad))
-}
-
 function getBendDisplacement_m({
-  bendDy_m,
   bendRadius_m,
   entryAngle_rad,
   exitAngle_rad,
 }: {
-  bendDy_m: number
   bendRadius_m: number
   entryAngle_rad: number
   exitAngle_rad: number
 }) {
   return {
     x: bendRadius_m * (Math.sin(exitAngle_rad) - Math.sin(entryAngle_rad)),
-    y: bendDy_m,
+    y: bendRadius_m * (Math.cos(entryAngle_rad) - Math.cos(exitAngle_rad)),
   }
 }
 

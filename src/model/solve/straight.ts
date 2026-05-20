@@ -113,6 +113,7 @@ export function solveStraightChuteLaunchGeometry(
   return {
     type: "valid",
     value: {
+      bendRadius_m: 0,
       chuteBendEnabled: false,
       entryLength_m: chuteLength_m,
       exitLength_m: 0,

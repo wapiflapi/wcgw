@@ -25,14 +25,14 @@ It is not a substitute for testing hardware.
 
 ## The Model
 
-| File | Purpose |
-| --- | --- |
-| [`src/model/solve`](src/model/solve) | Solves the nominal blueprint. Straight and bent chute solvers share the same harness and return solved chute lengths plus the release point that should work on paper. |
-| [`src/model/solve/straight.ts`](src/model/solve/straight.ts) | Closed-form straight chute launch solve. |
-| [`src/model/solve/bend.ts`](src/model/solve/bend.ts) | Bent chute launch solve for entry angle, bend angle, bend radius, and bend position. It solves one scalar unknown, flight time, and derives the rest of the geometry. |
-| [`src/model/simulation.ts`](src/model/simulation.ts) | Simulates one realized straight-chute blueprint through release, chute motion, flight, impact, and bounce. Bent chute simulation is intentionally disabled for now. |
-| [`src/model/realization.ts`](src/model/realization.ts) | Samples a blueprint within its tolerances. |
-| [`src/model/aggregation.ts`](src/model/aggregation.ts) | Reduces many observations into summary stats and representative cases. |
+| File                                                         | Purpose                                                                                                                                                                              |
+| ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| [`src/model/solve`](src/model/solve)                         | Solves the nominal blueprint. Straight and bent chute solvers share the same harness and return solved chute lengths plus the release point that should work on paper.               |
+| [`src/model/solve/straight.ts`](src/model/solve/straight.ts) | Closed-form straight chute launch solve.                                                                                                                                             |
+| [`src/model/solve/bend.ts`](src/model/solve/bend.ts)         | Bent chute launch solve for entry angle, entry run, bend size, and bend angle. It solves one scalar unknown, flight time, and derives the exit length plus the rest of the geometry. |
+| [`src/model/simulation.ts`](src/model/simulation.ts)         | Simulates one realized straight-chute blueprint through release, chute motion, flight, impact, and bounce. Bent chute simulation is intentionally disabled for now.                  |
+| [`src/model/realization.ts`](src/model/realization.ts)       | Samples a blueprint within its tolerances.                                                                                                                                           |
+| [`src/model/aggregation.ts`](src/model/aggregation.ts)       | Reduces many observations into summary stats and representative cases.                                                                                                               |
 
 `simulation.ts` currently runs these stages:
 
@@ -46,13 +46,13 @@ Bent chute blueprints currently stop after the solve and schematic stages. They 
 
 ## What It Currently Models
 
-| Area | Included |
-| --- | --- |
-| Geometry | Straight chute geometry and bent chute preview geometry solved from a requested release-to-impact time; drum pivot geometry before impact. |
-| Roll | Straight chute acceleration from gravity, rolling inertia, and chute efficiency; static friction checks; kinetic friction while sliding. |
-| Flight | Ballistic flight under gravity. |
-| Impact | Normal impact speed target; restitution; tangential impact friction; spin/tangent exchange. |
-| Robustness | Sampled build and material tolerances. |
+| Area       | Included                                                                                                                                   |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| Geometry   | Straight chute geometry and bent chute preview geometry solved from a requested release-to-impact time; drum pivot geometry before impact. |
+| Roll       | Straight chute acceleration from gravity, rolling inertia, and chute efficiency; static friction checks; kinetic friction while sliding.   |
+| Flight     | Ballistic flight under gravity.                                                                                                            |
+| Impact     | Normal impact speed target; restitution; tangential impact friction; spin/tangent exchange.                                                |
+| Robustness | Sampled build and material tolerances.                                                                                                     |
 
 ## Known Gaps
 
@@ -72,12 +72,12 @@ Bent chute blueprints currently stop after the solve and schematic stages. They 
 
 The UI is React, but most of the interesting work is in `src/model`.
 
-| File | Purpose |
-| --- | --- |
-| [`src/model/model.ts`](src/model/model.ts) | Shared model, blueprint, observation, and aggregate types. |
-| [`src/components/schematic-board.tsx`](src/components/schematic-board.tsx) | Trajectory drawing. |
-| [`src/hooks/use-url-model-input.ts`](src/hooks/use-url-model-input.ts) | Shareable URL state. |
-| [`src/workers/pipeline.worker.ts`](src/workers/pipeline.worker.ts) | Background solve and simulation pipeline. |
+| File                                                                       | Purpose                                                    |
+| -------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| [`src/model/model.ts`](src/model/model.ts)                                 | Shared model, blueprint, observation, and aggregate types. |
+| [`src/components/schematic-board.tsx`](src/components/schematic-board.tsx) | Trajectory drawing.                                        |
+| [`src/hooks/use-url-model-input.ts`](src/hooks/use-url-model-input.ts)     | Shareable URL state.                                       |
+| [`src/workers/pipeline.worker.ts`](src/workers/pipeline.worker.ts)         | Background solve and simulation pipeline.                  |
 
 Open model notes live in [`TODO.md`](TODO.md).
 

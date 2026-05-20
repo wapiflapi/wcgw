@@ -108,7 +108,7 @@ export function solveBlueprint(input: ModelInput): SolveResult<Blueprint> {
       ),
       chuteBendEnabled: chuteLaunchGeometry.chuteBendEnabled,
       chuteBendRadius_m: blueprintSolvedValue(
-        input.chuteBendRadius_m,
+        chuteLaunchGeometry.bendRadius_m,
         manufacturingLinearTolerance_m
       ),
       chuteBendAngle_rad: blueprintSolvedValue(

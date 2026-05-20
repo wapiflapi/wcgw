@@ -1,5 +1,3 @@
-import { useEffect } from "react"
-
 import { Info, WarningCircle } from "@phosphor-icons/react"
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
@@ -24,13 +22,13 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import { formatNumber } from "@/lib/format"
-import { defaultModelInput } from "@/model/defaults"
 import {
   getFreeFallDurationFromHeight_s,
   getFreeFallHeightFromDuration_m,
   getFreeFallHeightFromSpeed_m,
   getFreeFallSpeedFromHeight_m,
 } from "@/model/free-fall"
+import { clampInputValue, getBendInputRanges } from "@/model/input-constraints"
 import { getSphereMass_g, isMassWithinRelativeTolerance } from "@/model/marble"
 import type { ModelInput } from "@/model/model"
 import {
@@ -141,10 +139,6 @@ function SolveErrorAlert({ message }: { message: string }) {
   )
 }
 
-function clamp(value: number, min: number, max: number) {
-  return Math.min(max, Math.max(min, value))
-}
-
 export function DesignPanel({
   modelInput,
   onModelInputChange,
@@ -168,33 +162,39 @@ export function DesignPanel({
   }
 
   const gravity_mps2 = modelInput.gravity_mps2
-  const minimumChuteBendRadius_m = modelInput.marbleDiameter_m * 5
-  const minimumChuteBendRadius_mm = mToMm(minimumChuteBendRadius_m)
-  const maximumChuteBendRadius_mm = 500
+  const bendInputRanges = getBendInputRanges(modelInput)
+  const minimumChuteBendRadius_mm = mToMm(bendInputRanges.chuteBendRadius_m.min)
+  const maximumChuteBendRadius_mm = mToMm(bendInputRanges.chuteBendRadius_m.max)
   const chuteBendRadiusStep_mm = 1
-  const minimumChuteBendRadiusBound_m = mmToM(minimumChuteBendRadius_mm)
-  const maximumChuteBendRadius_m = mmToM(maximumChuteBendRadius_mm)
-  const normalizedBendRadius_m = clamp(
+  const minimumChuteEntryLength_mm = mToMm(
+    bendInputRanges.chuteEntryLength_m.min
+  )
+  const maximumChuteEntryLength_mm = mToMm(
+    bendInputRanges.chuteEntryLength_m.max
+  )
+  const chuteEntryLengthStep_mm = 1
+  const bendEntryAngle_rad = clampInputValue(
+    modelInput.chuteEntryAngle_rad,
+    bendInputRanges.chuteEntryAngle_rad
+  )
+  const bendEntryAngle_deg = radToDeg(bendEntryAngle_rad)
+  const maximumBendEntryAngle_deg = radToDeg(
+    bendInputRanges.chuteEntryAngle_rad.max
+  )
+  const bendAngle_rad = clampInputValue(
+    modelInput.chuteBendAngle_rad,
+    bendInputRanges.chuteBendAngle_rad
+  )
+  const bendAngle_deg = radToDeg(bendAngle_rad)
+  const maximumBendAngle_deg = radToDeg(bendInputRanges.chuteBendAngle_rad.max)
+  const bendRadius_m = clampInputValue(
     modelInput.chuteBendRadius_m,
-    minimumChuteBendRadiusBound_m,
-    maximumChuteBendRadius_m
+    bendInputRanges.chuteBendRadius_m
   )
-  const bendEntryAngle_deg = clamp(
-    radToDeg(modelInput.chuteEntryAngle_rad),
-    -90,
-    0
+  const bendEntryLength_m = clampInputValue(
+    modelInput.chuteEntryLength_m,
+    bendInputRanges.chuteEntryLength_m
   )
-  const maximumBendAngle_deg = Math.max(0, -bendEntryAngle_deg)
-  const bendAngle_deg = clamp(
-    radToDeg(modelInput.chuteBendAngle_rad),
-    0,
-    maximumBendAngle_deg
-  )
-  const normalizedBendModelInput = {
-    chuteBendRadius_m: normalizedBendRadius_m,
-    chuteEntryAngle_rad: degToModelRad(bendEntryAngle_deg),
-    chuteBendAngle_rad: degToModelRad(bendAngle_deg),
-  }
   const expectedMarbleMass_g = getSphereMass_g(
     modelInput.marbleDiameter_m,
     modelInput.marbleDensity_kgpm3
@@ -233,25 +233,6 @@ export function DesignPanel({
   const isPositionToleranceWithinTimingTolerance =
     positionToleranceTimingError_s <=
     Math.abs(modelInput.targetReleaseToImpactTimeTolerance_s)
-
-  useEffect(() => {
-    if (!modelInput.chuteBendEnabled) {
-      return
-    }
-
-    if (
-      modelInput.chuteBendRadius_m ===
-        normalizedBendModelInput.chuteBendRadius_m &&
-      modelInput.chuteEntryAngle_rad ===
-        normalizedBendModelInput.chuteEntryAngle_rad &&
-      modelInput.chuteBendAngle_rad ===
-        normalizedBendModelInput.chuteBendAngle_rad
-    ) {
-      return
-    }
-
-    updateInputs(normalizedBendModelInput)
-  })
 
   return (
     <Tabs defaultValue="blueprint">
@@ -426,19 +407,6 @@ export function DesignPanel({
 
                 updateInputs({
                   chuteBendEnabled: bendEnabled,
-                  ...(bendEnabled
-                    ? {
-                        chuteBendRadius_m: Math.max(
-                          Math.min(
-                            defaultModelInput.chuteBendRadius_m,
-                            maximumChuteBendRadius_m
-                          ),
-                          minimumChuteBendRadiusBound_m
-                        ),
-                        chuteEntryAngle_rad: degToModelRad(bendEntryAngle_deg),
-                        chuteBendAngle_rad: degToModelRad(bendAngle_deg),
-                      }
-                    : {}),
                 })
               }}
             >
@@ -449,7 +417,6 @@ export function DesignPanel({
                   <TabsTrigger value="bend">Bend</TabsTrigger>
                 </TabsList>
               </div>
-              {solveError ? <SolveErrorAlert message={solveError} /> : null}
               <TabsContent value="straight">
                 <SliderField
                   id="straightChuteEntryAngle_deg"
@@ -481,53 +448,18 @@ export function DesignPanel({
                     unit="deg"
                     value={bendEntryAngle_deg}
                     min={-90}
-                    max={0}
+                    max={maximumBendEntryAngle_deg}
                     step={1}
                     inverted
+                    virtualMax={0}
                     onChange={(angle_deg) => {
-                      const nextMaximumBendAngle_deg = Math.max(0, -angle_deg)
-                      updateInputs({
-                        chuteEntryAngle_rad: degToModelRad(angle_deg),
-                        chuteBendAngle_rad: degToModelRad(
-                          clamp(
-                            radToDeg(modelInput.chuteBendAngle_rad),
-                            0,
-                            nextMaximumBendAngle_deg
-                          )
-                        ),
-                      })
-                    }}
-                  />
-                  <SliderField
-                    id="chuteBendRadius_mm"
-                    label={
-                      <InfoLabel why="Radius of the curve connecting the entry and exit chute segments.">
-                        Bend size
-                      </InfoLabel>
-                    }
-                    unit="mm"
-                    value={mToMm(normalizedBendRadius_m)}
-                    min={minimumChuteBendRadius_mm}
-                    max={maximumChuteBendRadius_mm}
-                    step={chuteBendRadiusStep_mm}
-                    onChange={(radius_mm) => {
-                      updateInput("chuteBendRadius_m", mmToM(radius_mm))
-                    }}
-                  />
-                  <SliderField
-                    id="chuteEntryLength_ratio"
-                    label={
-                      <InfoLabel why="Moves the bend earlier or later along the chute by changing how much straight chute comes before it versus after it.">
-                        Bend position
-                      </InfoLabel>
-                    }
-                    unit=""
-                    value={modelInput.chuteEntryLength_ratio}
-                    min={0.1}
-                    max={0.9}
-                    step={0.01}
-                    onChange={(ratio) => {
-                      updateInput("chuteEntryLength_ratio", ratio)
+                      updateInput(
+                        "chuteEntryAngle_rad",
+                        clampInputValue(
+                          degToModelRad(angle_deg),
+                          bendInputRanges.chuteEntryAngle_rad
+                        )
+                      )
                     }}
                   />
                   <SliderField
@@ -542,15 +474,64 @@ export function DesignPanel({
                     min={0}
                     max={maximumBendAngle_deg}
                     step={1}
+                    virtualMax={90}
                     onChange={(angle_deg) => {
                       updateInput(
                         "chuteBendAngle_rad",
-                        degToModelRad(clamp(angle_deg, 0, maximumBendAngle_deg))
+                        clampInputValue(
+                          degToModelRad(angle_deg),
+                          bendInputRanges.chuteBendAngle_rad
+                        )
+                      )
+                    }}
+                  />
+                  <SliderField
+                    id="chuteEntryLength_mm"
+                    label={
+                      <InfoLabel why="Straight chute length before the bend. Set to zero when the chute should start directly on the curve.">
+                        Entry run
+                      </InfoLabel>
+                    }
+                    unit="mm"
+                    value={mToMm(bendEntryLength_m)}
+                    min={minimumChuteEntryLength_mm}
+                    max={maximumChuteEntryLength_mm}
+                    step={chuteEntryLengthStep_mm}
+                    onChange={(length_mm) => {
+                      updateInput(
+                        "chuteEntryLength_m",
+                        clampInputValue(
+                          mmToM(length_mm),
+                          bendInputRanges.chuteEntryLength_m
+                        )
+                      )
+                    }}
+                  />
+                  <SliderField
+                    id="chuteBendRadius_mm"
+                    label={
+                      <InfoLabel why="Radius of the curved bend. Smaller values make a tighter turn; larger values make the chute closer to a straight path.">
+                        Bend size
+                      </InfoLabel>
+                    }
+                    unit="mm"
+                    value={mToMm(bendRadius_m)}
+                    min={minimumChuteBendRadius_mm}
+                    max={maximumChuteBendRadius_mm}
+                    step={chuteBendRadiusStep_mm}
+                    onChange={(radius_mm) => {
+                      updateInput(
+                        "chuteBendRadius_m",
+                        clampInputValue(
+                          mmToM(radius_mm),
+                          bendInputRanges.chuteBendRadius_m
+                        )
                       )
                     }}
                   />
                 </FieldGroup>
               </TabsContent>
+              {solveError ? <SolveErrorAlert message={solveError} /> : null}
             </Tabs>
           </FieldSet>
 

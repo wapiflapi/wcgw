@@ -901,12 +901,14 @@ export function SchematicBoard({
         },
         boundingbox: DEFAULT_BOUNDS,
         drag: {
-          enabled: false,
+          enabled: true,
         },
         grid: false,
         keepaspectratio: true,
         pan: {
-          enabled: false,
+          enabled: true,
+          needShift: false,
+          needTwoFingers: false,
         },
         resize: {
           enabled: false,
@@ -914,8 +916,11 @@ export function SchematicBoard({
         },
         showCopyright: false,
         showInfobox: false,
-        showNavigation: false,
-        zoom: false,
+        showNavigation: true,
+        zoom: {
+          needShift: false,
+          wheel: true,
+        },
       }
 
       const board = initBoard(JXG, boardId, boardOptions)

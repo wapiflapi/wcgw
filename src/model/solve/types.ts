@@ -1,4 +1,5 @@
 export type ChuteLaunchGeometry = {
+  bendRadius_m: number
   chuteBendEnabled: boolean
   entryLength_m: number
   exitLength_m: number
