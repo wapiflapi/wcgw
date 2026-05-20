@@ -335,15 +335,21 @@ function SimulationOverview({
 }
 
 function ObservationAggregateView({
+  disabledReason,
   expandObservationDetails = false,
   observations,
   timingTolerance_s,
 }: {
+  disabledReason?: string
   expandObservationDetails?: boolean
   observations: ObservationAggregate | null
   timingTolerance_s: number
 }) {
   if (observations === null) {
+    if (disabledReason) {
+      return <p className="text-muted-foreground">{disabledReason}</p>
+    }
+
     return <p className="text-muted-foreground">Observations pending</p>
   }
 
@@ -483,6 +489,9 @@ export function ObservationsPanel({
   timingTolerance_s,
 }: ObservationsPanelProps) {
   const hasProblems = hasObservationProblems(observations, timingTolerance_s)
+  const simulationDisabledReason = blueprint?.chuteBendEnabled
+    ? "Simulation is disabled for bent chutes."
+    : undefined
   const exportRef = useRef<HTMLDivElement>(null)
 
   async function copyExport() {
@@ -556,6 +565,7 @@ export function ObservationsPanel({
         </TabsContent>
         <TabsContent value="observations">
           <ObservationAggregateView
+            disabledReason={simulationDisabledReason}
             observations={observations}
             timingTolerance_s={timingTolerance_s}
           />
@@ -590,6 +600,7 @@ export function ObservationsPanel({
         </FieldGroup>
         <h2>Observations</h2>
         <ObservationAggregateView
+          disabledReason={simulationDisabledReason}
           expandObservationDetails
           observations={observations}
           timingTolerance_s={timingTolerance_s}

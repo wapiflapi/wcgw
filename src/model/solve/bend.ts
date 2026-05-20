@@ -20,6 +20,7 @@ type FlightTimeCandidateSearch =
   | { type: "not-found"; reason: string }
 
 type BendSolveSetup = {
+  bendAngle_rad: number
   bendDrop_m: number
   bendLength_m: number
   bendRadius_m: number
@@ -29,11 +30,9 @@ type BendSolveSetup = {
   gravityInwardNormalAcceleration_mps2: number
   normalExitAlignment: number
   rollingGravityScale_mps2: number
-  signedBendAngle_rad: number
   straightDropPerLength_m: number
   targetNormalImpactSpeed_mps: number
   targetTotalTime_s: number
-  turnSign: number
 }
 
 const ROOT_SAMPLE_COUNT = 64
@@ -51,14 +50,8 @@ export function solveBendChuteLaunchGeometry(
   // Chute exit angle after the bend.
   const exitAngle_rad = input.chuteExitAngle_rad
 
-  // Signed angle swept by the bend, using the shortest turn.
-  const signedBendAngle_rad = signedAngleDelta_rad(
-    exitAngle_rad - entryAngle_rad
-  )
-
-  // Bend direction: positive turns counterclockwise, negative clockwise.
-  // A zero-angle bend has no curved part, but still keeps entry/exit lengths.
-  const turnSign = getTurnSign(signedBendAngle_rad)
+  // Bend mode always eases from a steeper entry angle to a flatter exit angle.
+  const bendAngle_rad = exitAngle_rad - entryAngle_rad
 
   // Bend radius, controlled by the artist-facing "bend size".
   const bendRadius_m = input.chuteBendRadius_m
@@ -123,14 +116,13 @@ export function solveBendChuteLaunchGeometry(
     bendRadius_m,
     entryAngle_rad,
     exitAngle_rad,
-    turnSign,
   })
 
   // Positive vertical drop through the bend. Downhill bends add speed.
   const bendDrop_m = -bendDy_m
 
   // Chute length along the curved bend.
-  const bendLength_m = bendRadius_m * Math.abs(signedBendAngle_rad)
+  const bendLength_m = bendRadius_m * bendAngle_rad
 
   // Drop per meter of straight chute, after the entry/exit split.
   const straightDropPerLength_m = -(
@@ -139,6 +131,7 @@ export function solveBendChuteLaunchGeometry(
   )
 
   const setup: BendSolveSetup = {
+    bendAngle_rad,
     bendDrop_m,
     bendLength_m,
     bendRadius_m,
@@ -148,11 +141,9 @@ export function solveBendChuteLaunchGeometry(
     gravityInwardNormalAcceleration_mps2,
     normalExitAlignment,
     rollingGravityScale_mps2,
-    signedBendAngle_rad,
     straightDropPerLength_m,
     targetNormalImpactSpeed_mps,
     targetTotalTime_s,
-    turnSign,
   }
 
   const invalidReason = getBendSetupInvalidReason(setup)
@@ -212,7 +203,6 @@ export function solveBendChuteLaunchGeometry(
     bendRadius_m,
     entryAngle_rad,
     exitAngle_rad,
-    turnSign,
   })
 
   // Displacement across the final straight chute segment.
@@ -350,11 +340,11 @@ function getBendTime_s(setup: BendSolveSetup, entrySpeed_mps: number) {
 
     // Local chute angle partway through the bend.
     const angle_rad =
-      setup.entryAngle_rad + progress * setup.signedBendAngle_rad
+      setup.entryAngle_rad + progress * setup.bendAngle_rad
 
     // Vertical displacement from bend start to this sample point.
     const partialBendDy_m =
-      (setup.bendRadius_m / setup.turnSign) *
+      setup.bendRadius_m *
       (Math.cos(setup.entryAngle_rad) - Math.cos(angle_rad))
 
     // Positive vertical drop from bend start to this sample point.
@@ -440,7 +430,7 @@ function chooseFlightTimeCandidate(
   if (alwaysTooSlow) {
     return {
       reason:
-        "Chute is too slow for the target time.\nMake the entry or exit angle steeper, or move the bend position to give the marble a faster path. Change timing or punch only as a last resort.",
+        "Chute is too slow for the target time.\nMake the entry or exit angle steeper, or move the bend position to give the marble a faster path.",
       type: "not-found",
     }
   }
@@ -448,7 +438,7 @@ function chooseFlightTimeCandidate(
   if (alwaysTooFast) {
     return {
       reason:
-        "Chute is too fast for the target time.\nMake the entry or exit angle gentler, increase the bend size, or move the bend position to soften the path. Change timing or punch only as a last resort.",
+        "Chute is too fast for the target time.\nMake the entry or exit angle gentler, increase the bend size, or move the bend position to soften the path.",
       type: "not-found",
     }
   }
@@ -541,6 +531,7 @@ function advanceConstantAcceleration(
 }
 
 function getBendSetupInvalidReason({
+  bendAngle_rad,
   bendRadius_m,
   entryLengthShare_ratio,
   normalExitAlignment,
@@ -551,6 +542,10 @@ function getBendSetupInvalidReason({
 }: BendSolveSetup) {
   if (bendRadius_m <= 0) {
     return "Bend size is too small.\nUse a positive bend size so the chute has room to turn."
+  }
+
+  if (bendAngle_rad <= SOLVE_EPSILON) {
+    return "Exit angle needs to be flatter than entry angle.\nRaise the exit angle so the bend smooths from a steep entry into a flatter launch."
   }
 
   if (entryLengthShare_ratio <= 0 || entryLengthShare_ratio >= 1) {
@@ -587,47 +582,16 @@ function invalidSolve(reason: string): SolveResult<ChuteLaunchGeometry> {
   }
 }
 
-function signedAngleDelta_rad(angle_rad: number) {
-  let nextAngle_rad = angle_rad
-
-  while (nextAngle_rad <= -Math.PI) {
-    nextAngle_rad += Math.PI * 2
-  }
-
-  while (nextAngle_rad > Math.PI) {
-    nextAngle_rad -= Math.PI * 2
-  }
-
-  return nextAngle_rad
-}
-
-function getTurnSign(signedBendAngle_rad: number) {
-  if (Math.abs(signedBendAngle_rad) <= SOLVE_EPSILON) {
-    return 0
-  }
-
-  return Math.sign(signedBendAngle_rad)
-}
-
 function getBendVerticalDisplacement_m({
   bendRadius_m,
   entryAngle_rad,
   exitAngle_rad,
-  turnSign,
 }: {
   bendRadius_m: number
   entryAngle_rad: number
   exitAngle_rad: number
-  turnSign: number
 }) {
-  if (turnSign === 0) {
-    return 0
-  }
-
-  return (
-    (bendRadius_m / turnSign) *
-    (Math.cos(entryAngle_rad) - Math.cos(exitAngle_rad))
-  )
+  return bendRadius_m * (Math.cos(entryAngle_rad) - Math.cos(exitAngle_rad))
 }
 
 function getBendDisplacement_m({
@@ -635,22 +599,14 @@ function getBendDisplacement_m({
   bendRadius_m,
   entryAngle_rad,
   exitAngle_rad,
-  turnSign,
 }: {
   bendDy_m: number
   bendRadius_m: number
   entryAngle_rad: number
   exitAngle_rad: number
-  turnSign: number
 }) {
-  if (turnSign === 0) {
-    return { x: 0, y: 0 }
-  }
-
   return {
-    x:
-      (bendRadius_m / turnSign) *
-      (Math.sin(exitAngle_rad) - Math.sin(entryAngle_rad)),
+    x: bendRadius_m * (Math.sin(exitAngle_rad) - Math.sin(entryAngle_rad)),
     y: bendDy_m,
   }
 }

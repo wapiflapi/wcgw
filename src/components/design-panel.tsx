@@ -1,3 +1,5 @@
+import { useEffect } from "react"
+
 import { Info, WarningCircle } from "@phosphor-icons/react"
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
@@ -43,6 +45,7 @@ import {
 type DesignPanelProps = {
   modelInput: ModelInput
   onModelInputChange: (modelInput: ModelInput) => void
+  showChuteModeTabs: boolean
   solveError: string | null
 }
 
@@ -139,9 +142,14 @@ function SolveErrorAlert({ message }: { message: string }) {
   )
 }
 
+function clamp(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value))
+}
+
 export function DesignPanel({
   modelInput,
   onModelInputChange,
+  showChuteModeTabs,
   solveError,
 }: DesignPanelProps) {
   function updateInput<Key extends keyof ModelInput>(
@@ -164,8 +172,30 @@ export function DesignPanel({
   const gravity_mps2 = modelInput.gravity_mps2
   const minimumChuteBendRadius_m = modelInput.marbleDiameter_m * 5
   const minimumChuteBendRadius_mm = mToMm(minimumChuteBendRadius_m)
-  const maximumChuteBendRadius_mm = 1000
+  const maximumChuteBendRadius_mm = 500
   const chuteBendRadiusStep_mm = 1
+  const minimumChuteBendRadiusBound_m = mmToM(minimumChuteBendRadius_mm)
+  const maximumChuteBendRadius_m = mmToM(maximumChuteBendRadius_mm)
+  const normalizedBendRadius_m = clamp(
+    modelInput.chuteBendRadius_m,
+    minimumChuteBendRadiusBound_m,
+    maximumChuteBendRadius_m
+  )
+  const bendEntryAngle_deg = clamp(
+    radToDeg(modelInput.chuteEntryAngle_rad),
+    -90,
+    0
+  )
+  const minimumBendExitAngle_deg = Math.min(0, bendEntryAngle_deg + 1)
+  const bendExitAngle_deg = Math.max(
+    minimumBendExitAngle_deg,
+    radToDeg(modelInput.chuteExitAngle_rad)
+  )
+  const normalizedBendModelInput = {
+    chuteBendRadius_m: normalizedBendRadius_m,
+    chuteEntryAngle_rad: degToModelRad(bendEntryAngle_deg),
+    chuteExitAngle_rad: degToModelRad(bendExitAngle_deg),
+  }
   const expectedMarbleMass_g = getSphereMass_g(
     modelInput.marbleDiameter_m,
     modelInput.marbleDensity_kgpm3
@@ -204,6 +234,24 @@ export function DesignPanel({
   const isPositionToleranceWithinTimingTolerance =
     positionToleranceTimingError_s <=
     Math.abs(modelInput.targetReleaseToImpactTimeTolerance_s)
+
+  useEffect(() => {
+    if (!modelInput.chuteBendEnabled) {
+      return
+    }
+
+    if (
+      modelInput.chuteBendRadius_m ===
+        normalizedBendModelInput.chuteBendRadius_m &&
+      modelInput.chuteEntryAngle_rad ===
+        normalizedBendModelInput.chuteEntryAngle_rad &&
+      modelInput.chuteExitAngle_rad === normalizedBendModelInput.chuteExitAngle_rad
+    ) {
+      return
+    }
+
+    updateInputs(normalizedBendModelInput)
+  })
 
   return (
     <Tabs defaultValue="blueprint">
@@ -381,9 +429,16 @@ export function DesignPanel({
                   ...(bendEnabled
                     ? {
                         chuteBendRadius_m: Math.max(
-                          defaultModelInput.chuteBendRadius_m,
-                          minimumChuteBendRadius_m
+                          Math.min(
+                            defaultModelInput.chuteBendRadius_m,
+                            maximumChuteBendRadius_m
+                          ),
+                          minimumChuteBendRadiusBound_m
                         ),
+                        chuteEntryAngle_rad: degToModelRad(
+                          bendEntryAngle_deg
+                        ),
+                        chuteExitAngle_rad: degToModelRad(bendExitAngle_deg),
                       }
                     : {}),
                 })
@@ -391,10 +446,12 @@ export function DesignPanel({
             >
               <div className="flex items-center justify-between gap-4">
                 <div className="text-sm font-medium">Chute</div>
-                <TabsList>
-                  <TabsTrigger value="straight">Straight</TabsTrigger>
-                  <TabsTrigger value="bend">Bend</TabsTrigger>
-                </TabsList>
+                {showChuteModeTabs ? (
+                  <TabsList>
+                    <TabsTrigger value="straight">Straight</TabsTrigger>
+                    <TabsTrigger value="bend">Bend</TabsTrigger>
+                  </TabsList>
+                ) : null}
               </div>
               {solveError ? <SolveErrorAlert message={solveError} /> : null}
               <TabsContent value="straight">
@@ -426,16 +483,23 @@ export function DesignPanel({
                       </InfoLabel>
                     }
                     unit="deg"
-                    value={radToDeg(modelInput.chuteEntryAngle_rad)}
+                    value={bendEntryAngle_deg}
                     min={-90}
                     max={0}
                     step={1}
                     inverted
                     onChange={(angle_deg) => {
-                      updateInput(
-                        "chuteEntryAngle_rad",
-                        degToModelRad(angle_deg)
-                      )
+                      const minimumExitAngle_deg = Math.min(0, angle_deg + 1)
+
+                      updateInputs({
+                        chuteEntryAngle_rad: degToModelRad(angle_deg),
+                        chuteExitAngle_rad: degToModelRad(
+                          Math.max(
+                            minimumExitAngle_deg,
+                            radToDeg(modelInput.chuteExitAngle_rad)
+                          )
+                        ),
+                      })
                     }}
                   />
                   <SliderField
@@ -446,10 +510,7 @@ export function DesignPanel({
                       </InfoLabel>
                     }
                     unit="mm"
-                    value={Math.max(
-                      mToMm(modelInput.chuteBendRadius_m),
-                      minimumChuteBendRadius_mm
-                    )}
+                    value={mToMm(normalizedBendRadius_m)}
                     min={minimumChuteBendRadius_mm}
                     max={maximumChuteBendRadius_mm}
                     step={chuteBendRadiusStep_mm}
@@ -481,15 +542,17 @@ export function DesignPanel({
                       </InfoLabel>
                     }
                     unit="deg"
-                    value={radToDeg(modelInput.chuteExitAngle_rad)}
-                    min={-90}
+                    value={bendExitAngle_deg}
+                    min={minimumBendExitAngle_deg}
                     max={0}
                     step={1}
                     inverted
                     onChange={(angle_deg) => {
                       updateInput(
                         "chuteExitAngle_rad",
-                        degToModelRad(angle_deg)
+                        degToModelRad(
+                          Math.max(minimumBendExitAngle_deg, angle_deg)
+                        )
                       )
                     }}
                   />

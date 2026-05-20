@@ -13,23 +13,44 @@ type Point_m = {
   y_m: number
 }
 
+type Segment_m = {
+  end: Point_m
+  start: Point_m
+}
+
 type SchematicGeometry = {
   bounds: [number, number, number, number]
   drumLineA: Point_m
   drumLineB: Point_m
   impactPoint: Point_m
-  chuteExit: Point_m
-  releasePoint: Point_m
+  chutePath: ChutePathGeometry
+}
+
+type ChutePathGeometry = {
+  bendCenter: Point_m
+  bendPoints: Point_m[]
+  bendVisible: boolean
+  entrySegment: Segment_m
+  exitSegment: Segment_m
 }
 
 type SchematicElements = {
+  chute: ChuteElements
   drumLine: JXG.GeometryElement
   drumLineA: JXG.Point
   drumLineB: JXG.Point
   impactPoint: JXG.Point
-  chuteExit: JXG.Point
-  chuteSegment: JXG.GeometryElement
-  releasePoint: JXG.Point
+}
+
+type ChuteElements = {
+  bendArc: JXG.GeometryElement
+  bendCenter: JXG.Point
+  entryEnd: JXG.Point
+  entrySegment: JXG.GeometryElement
+  entryStart: JXG.Point
+  exitEnd: JXG.Point
+  exitSegment: JXG.GeometryElement
+  exitStart: JXG.Point
 }
 
 type MarblePathStyle = {
@@ -65,6 +86,7 @@ const MIN_VIEW_SIZE_m = 0.5
 const VIEW_MARGIN_RATIO = 0.25
 const MIN_TRAJECTORY_TIME_s = 0.001
 const TRAJECTORY_POINT_COUNT = 48
+const CHUTE_BEND_POINT_COUNT = 48
 const ACCEPTABLE_TIMING_DEVIATION_s = 0.001
 const ACCEPTABLE_IMPACT_SPEED_DEVIATION_mps = 0.01
 
@@ -140,23 +162,10 @@ function lineHandlesThroughPoint(
 }
 
 function getSchematicGeometry(blueprint: Blueprint): SchematicGeometry {
-  const releasePoint = {
-    x_m: blueprint.releasePoint_x_m.nominal,
-    y_m: blueprint.releasePoint_y_m.nominal,
-  }
+  const chutePath = getChutePathGeometry(blueprint)
   const impactPoint = {
     x_m: blueprint.impactPoint_x_m.nominal,
     y_m: blueprint.impactPoint_y_m.nominal,
-  }
-  const chuteExit = {
-    x_m:
-      releasePoint.x_m +
-      blueprint.chuteEntryLength_m.nominal *
-        Math.cos(blueprint.chuteEntryAngle_rad.nominal),
-    y_m:
-      releasePoint.y_m +
-      blueprint.chuteEntryLength_m.nominal *
-        Math.sin(blueprint.chuteEntryAngle_rad.nominal),
   }
   const drumTiltAngle_rad = blueprint.drumTiltAngle_rad.nominal
   const drumSurfaceNormal = {
@@ -175,7 +184,104 @@ function getSchematicGeometry(blueprint: Blueprint): SchematicGeometry {
     drumSurfaceContact,
     drumTiltAngle_rad
   )
-  const finitePoints = [releasePoint, chuteExit, impactPoint]
+  const finitePoints = [
+    chutePath.entrySegment.start,
+    chutePath.entrySegment.end,
+    ...chutePath.bendPoints,
+    chutePath.exitSegment.start,
+    chutePath.exitSegment.end,
+    impactPoint,
+  ]
+  const bounds = getBoundsForPoints(finitePoints)
+
+  return {
+    bounds,
+    drumLineA: drumLine.a,
+    drumLineB: drumLine.b,
+    impactPoint,
+    chutePath,
+  }
+}
+
+function getChutePathGeometry(blueprint: Blueprint): ChutePathGeometry {
+  const entryAngle_rad = blueprint.chuteEntryAngle_rad.nominal
+  const exitAngle_rad = blueprint.chuteExitAngle_rad.nominal
+  const entryLength_m = blueprint.chuteEntryLength_m.nominal
+  const exitLength_m = blueprint.chuteExitLength_m.nominal
+  const bendRadius_m = blueprint.chuteBendRadius_m.nominal
+  const bendAngle_rad = exitAngle_rad - entryAngle_rad
+  const entryStart = {
+    x_m: blueprint.releasePoint_x_m.nominal,
+    y_m: blueprint.releasePoint_y_m.nominal,
+  }
+  const entryEnd = {
+    x_m: entryStart.x_m + entryLength_m * Math.cos(entryAngle_rad),
+    y_m: entryStart.y_m + entryLength_m * Math.sin(entryAngle_rad),
+  }
+
+  if (!blueprint.chuteBendEnabled || bendAngle_rad <= Number.EPSILON) {
+    const exitEnd = {
+      x_m: entryEnd.x_m + exitLength_m * Math.cos(entryAngle_rad),
+      y_m: entryEnd.y_m + exitLength_m * Math.sin(entryAngle_rad),
+    }
+
+    return {
+      bendCenter: entryEnd,
+      bendPoints: [],
+      bendVisible: false,
+      entrySegment: {
+        end: entryEnd,
+        start: entryStart,
+      },
+      exitSegment: {
+        end: exitEnd,
+        start: entryEnd,
+      },
+    }
+  }
+
+  const bendPoints = getBendCurvePoints({
+    bendAngle_rad,
+    entryAngle_rad,
+    entryEnd,
+    exitAngle_rad,
+    radius_m: bendRadius_m,
+  })
+  const exitStart = bendPoints[bendPoints.length - 1] ?? entryEnd
+  const exitEnd = {
+    x_m: exitStart.x_m + exitLength_m * Math.cos(exitAngle_rad),
+    y_m: exitStart.y_m + exitLength_m * Math.sin(exitAngle_rad),
+  }
+  const bendCenter = getBendCenter({
+    entryAngle_rad,
+    entryEnd,
+    radius_m: bendRadius_m,
+  })
+
+  return {
+    bendCenter,
+    bendPoints,
+    bendVisible: bendPoints.length > 0,
+    entrySegment: {
+      end: entryEnd,
+      start: entryStart,
+    },
+    exitSegment: {
+      end: exitEnd,
+      start: exitStart,
+    },
+  }
+}
+
+function getBoundsForPoints(points: Point_m[]) {
+  const finitePoints = points.filter(
+    (point) => Number.isFinite(point.x_m) && Number.isFinite(point.y_m)
+  )
+
+  if (finitePoints.length === 0) {
+    return DEFAULT_BOUNDS
+  }
+
   const xs = finitePoints.map((point) => point.x_m)
   const ys = finitePoints.map((point) => point.y_m)
   const minX_m = Math.min(...xs)
@@ -189,18 +295,70 @@ function getSchematicGeometry(blueprint: Blueprint): SchematicGeometry {
   const center_y_m = (minY_m + maxY_m) / 2
   const halfViewSize_m = (viewSize_m * (1 + VIEW_MARGIN_RATIO * 2)) / 2
 
+  return [
+    center_x_m - halfViewSize_m,
+    center_y_m + halfViewSize_m,
+    center_x_m + halfViewSize_m,
+    center_y_m - halfViewSize_m,
+  ] as [number, number, number, number]
+}
+
+function getBendCurvePoints({
+  bendAngle_rad,
+  entryAngle_rad,
+  entryEnd,
+  exitAngle_rad,
+  radius_m,
+}: {
+  bendAngle_rad: number
+  entryAngle_rad: number
+  entryEnd: Point_m
+  exitAngle_rad: number
+  radius_m: number
+}) {
+  const points: Point_m[] = []
+
+  for (let index = 0; index < CHUTE_BEND_POINT_COUNT; index += 1) {
+    const progress = index / (CHUTE_BEND_POINT_COUNT - 1)
+    const angle_rad = entryAngle_rad + progress * bendAngle_rad
+    const bendDx_m =
+      radius_m * (Math.sin(angle_rad) - Math.sin(entryAngle_rad))
+    const bendDy_m =
+      radius_m * (Math.cos(entryAngle_rad) - Math.cos(angle_rad))
+
+    points.push({
+      x_m: entryEnd.x_m + bendDx_m,
+      y_m: entryEnd.y_m + bendDy_m,
+    })
+  }
+
+  // Keep the final point exactly aligned with the exit angle inputs. The
+  // sampled curve normally lands here already; this removes tiny drift.
+  const lastPoint = points[points.length - 1]
+  if (lastPoint !== undefined) {
+    lastPoint.x_m =
+      entryEnd.x_m +
+      radius_m * (Math.sin(exitAngle_rad) - Math.sin(entryAngle_rad))
+    lastPoint.y_m =
+      entryEnd.y_m +
+      radius_m * (Math.cos(entryAngle_rad) - Math.cos(exitAngle_rad))
+  }
+
+  return points
+}
+
+function getBendCenter({
+  entryAngle_rad,
+  entryEnd,
+  radius_m,
+}: {
+  entryAngle_rad: number
+  entryEnd: Point_m
+  radius_m: number
+}) {
   return {
-    bounds: [
-      center_x_m - halfViewSize_m,
-      center_y_m + halfViewSize_m,
-      center_x_m + halfViewSize_m,
-      center_y_m - halfViewSize_m,
-    ],
-    drumLineA: drumLine.a,
-    drumLineB: drumLine.b,
-    impactPoint,
-    chuteExit,
-    releasePoint,
+    x_m: entryEnd.x_m - radius_m * Math.sin(entryAngle_rad),
+    y_m: entryEnd.y_m + radius_m * Math.cos(entryAngle_rad),
   }
 }
 
@@ -238,6 +396,60 @@ function createVisiblePoint(
   })
 }
 
+function createChuteElements(
+  board: JXG.Board,
+  chutePath: ChutePathGeometry,
+  colors: {
+    background: string
+    primary: string
+  }
+): ChuteElements {
+  const entryStart = createVisiblePoint(
+    board,
+    chutePath.entrySegment.start,
+    colors,
+    4
+  )
+  const entryEnd = createHiddenPoint(board, chutePath.entrySegment.end)
+  const exitStart = createHiddenPoint(board, chutePath.exitSegment.start)
+  const exitEnd = createHiddenPoint(board, chutePath.exitSegment.end)
+  const bendCenter = createHiddenPoint(board, chutePath.bendCenter)
+  const entrySegment = board.create("segment", [entryStart, entryEnd], {
+    fixed: true,
+    highlightStrokeColor: colors.primary,
+    strokeColor: colors.primary,
+    strokeWidth: 3,
+  })
+  const bendArc = board.create(
+    "arc",
+    [bendCenter, entryEnd, exitStart],
+    {
+      fixed: true,
+      highlightStrokeColor: colors.primary,
+      strokeColor: colors.primary,
+      strokeWidth: 3,
+      visible: chutePath.bendVisible,
+    }
+  )
+  const exitSegment = board.create("segment", [exitStart, exitEnd], {
+    fixed: true,
+    highlightStrokeColor: colors.primary,
+    strokeColor: colors.primary,
+    strokeWidth: 3,
+  })
+
+  return {
+    bendArc,
+    bendCenter,
+    entryEnd,
+    entrySegment,
+    entryStart,
+    exitEnd,
+    exitSegment,
+    exitStart,
+  }
+}
+
 function createSchematicElements(
   board: JXG.Board,
   geometry: SchematicGeometry,
@@ -246,22 +458,10 @@ function createSchematicElements(
     primary: string
   }
 ): SchematicElements {
-  const releasePoint = createVisiblePoint(
-    board,
-    geometry.releasePoint,
-    colors,
-    4
-  )
+  const chute = createChuteElements(board, geometry.chutePath, colors)
   const impactPoint = createVisiblePoint(board, geometry.impactPoint, colors, 3)
-  const chuteExit = createHiddenPoint(board, geometry.chuteExit)
   const drumLineA = createHiddenPoint(board, geometry.drumLineA)
   const drumLineB = createHiddenPoint(board, geometry.drumLineB)
-  const chuteSegment = board.create("segment", [releasePoint, chuteExit], {
-    fixed: true,
-    highlightStrokeColor: colors.primary,
-    strokeColor: colors.primary,
-    strokeWidth: 3,
-  })
   const drumLine = board.create("line", [drumLineA, drumLineB], {
     fixed: true,
     highlightStrokeColor: colors.primary,
@@ -270,13 +470,11 @@ function createSchematicElements(
   })
 
   return {
+    chute,
     drumLine,
     drumLineA,
     drumLineB,
     impactPoint,
-    chuteExit,
-    chuteSegment,
-    releasePoint,
   }
 }
 
@@ -596,14 +794,42 @@ function removeSchematicElements(
   elements: SchematicElements
 ) {
   board.removeObject([
-    elements.chuteSegment,
+    elements.chute.entrySegment,
+    elements.chute.bendArc,
+    elements.chute.exitSegment,
     elements.drumLine,
-    elements.releasePoint,
+    elements.chute.entryStart,
+    elements.chute.entryEnd,
+    elements.chute.exitStart,
+    elements.chute.exitEnd,
+    elements.chute.bendCenter,
     elements.impactPoint,
-    elements.chuteExit,
     elements.drumLineA,
     elements.drumLineB,
   ])
+}
+
+function updateChuteElements(
+  elements: ChuteElements,
+  chutePath: ChutePathGeometry
+) {
+  movePoint(elements.entryStart, chutePath.entrySegment.start)
+  movePoint(elements.entryEnd, chutePath.entrySegment.end)
+  movePoint(elements.exitStart, chutePath.exitSegment.start)
+  movePoint(elements.exitEnd, chutePath.exitSegment.end)
+  movePoint(elements.bendCenter, chutePath.bendCenter)
+  elements.bendArc.setAttribute({
+    visible: chutePath.bendVisible,
+  })
+  elements.exitSegment.setAttribute({
+    visible:
+      chutePath.bendVisible ||
+      distanceBetweenPoints_m(
+        chutePath.exitSegment.start,
+        chutePath.exitSegment.end
+      ) >
+        Number.EPSILON,
+  })
 }
 
 function updateSchematicElements(
@@ -611,12 +837,15 @@ function updateSchematicElements(
   elements: SchematicElements,
   geometry: SchematicGeometry
 ) {
-  movePoint(elements.releasePoint, geometry.releasePoint)
+  updateChuteElements(elements.chute, geometry.chutePath)
   movePoint(elements.impactPoint, geometry.impactPoint)
-  movePoint(elements.chuteExit, geometry.chuteExit)
   movePoint(elements.drumLineA, geometry.drumLineA)
   movePoint(elements.drumLineB, geometry.drumLineB)
   board.setBoundingBox(geometry.bounds, true)
+}
+
+function distanceBetweenPoints_m(a: Point_m, b: Point_m) {
+  return Math.hypot(a.x_m - b.x_m, a.y_m - b.y_m)
 }
 
 export function SchematicBoard({

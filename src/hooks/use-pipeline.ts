@@ -63,7 +63,7 @@ export function usePipeline(
           setBlueprint(event.result.value)
           setSolveError(null)
           setObservations(null)
-          setObservationsStale(true)
+          setObservationsStale(!event.result.value.chuteBendEnabled)
           return
         }
 

@@ -17,7 +17,7 @@ const PIPELINE_RUN_OPTIONS: PipelineRunOptions = {
 }
 
 export function App() {
-  const [modelInput, setModelInput] = useUrlModelInput()
+  const [modelInput, setModelInput, featureFlags] = useUrlModelInput()
   const { blueprint, observations, observationsStale, solveError } =
     usePipeline(modelInput, PIPELINE_RUN_OPTIONS)
 
@@ -28,6 +28,7 @@ export function App() {
           <DesignPanel
             modelInput={modelInput}
             onModelInputChange={setModelInput}
+            showChuteModeTabs={featureFlags.chuteModeTabs}
             solveError={solveError}
           />
         </section>

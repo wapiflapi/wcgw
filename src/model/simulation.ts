@@ -525,10 +525,14 @@ function simulateStraightChuteUntilDrop(
 }
 
 function simulateBendChuteUntilDrop(
-  blueprintRealization: BlueprintRealization,
+  _blueprintRealization: BlueprintRealization,
   releaseSnapshot: Snapshot
 ): SimulationStageResult {
-  return simulateStraightChuteUntilDrop(blueprintRealization, releaseSnapshot)
+  return {
+    snapshot: releaseSnapshot,
+    checks: {},
+    invalidReason: "Simulation is disabled for bent chutes.",
+  }
 }
 
 function simulateBallisticsUntilImpact(

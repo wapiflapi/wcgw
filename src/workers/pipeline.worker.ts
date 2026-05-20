@@ -92,6 +92,11 @@ const api: PipelineWorkerApi = {
     }
 
     const blueprint = blueprintResult.value
+
+    if (blueprint.chuteBendEnabled) {
+      return
+    }
+
     let observations = createObservationAggregate(
       options.observationRequestedRuns
     )
