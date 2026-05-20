@@ -12,12 +12,11 @@ export type ModelInput = {
   targetReleaseToImpactTimeTolerance_s: number
   targetNormalImpactSpeed_mps: number
 
-  rampAngle_rad: number
-  rampLength_m: number
-  releasePoint_x_m: number
-  releasePoint_y_m: number
-  impactPoint_x_m: number
-  impactPoint_y_m: number
+  chuteEntryAngle_rad: number
+  chuteBendEnabled: boolean
+  chuteEntryLength_m: number
+  chuteBendRadius_m: number
+  chuteBendAngle_rad: number
   drumTiltAngle_rad: number
   drumPivotArmLength_m: number
   drumPivotAngleRange_rad: number
@@ -33,10 +32,10 @@ export type ModelInput = {
   staticFrictionCoefficientTolerance_ratio: number
   kineticFrictionCoefficient_ratio: number
   kineticFrictionCoefficientTolerance_ratio: number
-  minimumReliableRampAcceleration_mps2: number
-  minimumReliableRampAccelerationTolerance_mps2: number
-  rampEnergyEfficiency_ratio: number
-  rampEnergyEfficiencyTolerance_ratio: number
+  minimumReliableChuteAcceleration_mps2: number
+  minimumReliableChuteAccelerationTolerance_mps2: number
+  chuteEnergyEfficiency_ratio: number
+  chuteEnergyEfficiencyTolerance_ratio: number
   impactRestitutionCoefficient_ratio: number
   impactRestitutionCoefficientTolerance_ratio: number
   impactFrictionCoefficient_ratio: number
@@ -52,8 +51,12 @@ export type Blueprint = {
   targetReleaseToImpactTime_s: BlueprintValue
   targetNormalImpactSpeed_mps: BlueprintValue
 
-  rampAngle_rad: BlueprintValue
-  rampLength_m: BlueprintValue
+  chuteEntryAngle_rad: BlueprintValue
+  chuteEntryLength_m: BlueprintValue
+  chuteBendEnabled: boolean
+  chuteBendRadius_m: BlueprintValue
+  chuteBendAngle_rad: BlueprintValue
+  chuteExitLength_m: BlueprintValue
   releasePoint_x_m: BlueprintValue
   releasePoint_y_m: BlueprintValue
   impactPoint_x_m: BlueprintValue
@@ -67,16 +70,28 @@ export type Blueprint = {
   rollingInertiaFactor_ratio: BlueprintValue
   staticFrictionCoefficient_ratio: BlueprintValue
   kineticFrictionCoefficient_ratio: BlueprintValue
-  minimumReliableRampAcceleration_mps2: BlueprintValue
-  rampEnergyEfficiency_ratio: BlueprintValue
+  minimumReliableChuteAcceleration_mps2: BlueprintValue
+  chuteEnergyEfficiency_ratio: BlueprintValue
   impactRestitutionCoefficient_ratio: BlueprintValue
   impactFrictionCoefficient_ratio: BlueprintValue
   spinTransferEfficiency_ratio: BlueprintValue
 }
 
 export type BlueprintRealization = {
-  [Key in keyof Blueprint]: number
+  [Key in keyof Blueprint]: Blueprint[Key] extends BlueprintValue
+    ? number
+    : Blueprint[Key]
 }
+
+export type SolveResult<T> =
+  | {
+      type: "valid"
+      value: T
+    }
+  | {
+      reason: string
+      type: "invalid"
+    }
 
 export type Snapshot = {
   marblePosition_x_m: number
@@ -92,9 +107,9 @@ export type ObservationChecks = {
   contactMovingIntoDrumOk: boolean | null
   targetNormalImpactSpeedDeviation_mps: number | null
   targetReleaseToImpactTimeDeviation_s: number | null
-  rampReliableAccelerationOk: boolean | null
-  rampRequiredStaticFrictionCoefficient_ratio: number | null
-  rampStaticFrictionOk: boolean | null
+  chuteReliableAccelerationOk: boolean | null
+  chuteRequiredStaticFrictionCoefficient_ratio: number | null
+  chuteStaticFrictionOk: boolean | null
 }
 
 export type Observation = {
@@ -127,8 +142,8 @@ export type ObservationCheckAggregate = {
   invalidCount: number
   ballisticsImpactFound: BooleanCheckAggregate
   contactMovingIntoDrumOk: BooleanCheckAggregate
-  rampReliableAccelerationOk: BooleanCheckAggregate
-  rampStaticFrictionOk: BooleanCheckAggregate
+  chuteReliableAccelerationOk: BooleanCheckAggregate
+  chuteStaticFrictionOk: BooleanCheckAggregate
   targetNormalImpactSpeedDeviation_mps: NumericCheckAggregate
   targetReleaseToImpactTimeDeviation_s: NumericCheckAggregate
 }

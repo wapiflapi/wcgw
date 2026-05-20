@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 
 import { Field, FieldLabel } from "@/components/ui/field"
 import {
@@ -29,6 +29,7 @@ type SliderFieldProps = {
   max: number
   step: number
   inverted?: boolean
+  virtualMax?: number
   onChange: (value: number) => void
 }
 
@@ -39,7 +40,7 @@ function getNumberStep(value: string) {
     return 0.01
   }
 
-  if (numericValue < 50) {
+  if (numericValue < 100) {
     return 1
   }
 
@@ -143,10 +144,69 @@ export function SliderField({
   max,
   step,
   inverted = false,
+  virtualMax,
   onChange,
 }: SliderFieldProps) {
+  const frameRef = useRef<number | null>(null)
+  const [localState, setLocalState] = useState({
+    externalValue: value,
+    isSliding: false,
+    value,
+  })
   const digits = step < 1 ? 1 : 0
-  const sliderValue = inverted ? max + min - value : value
+  let localValue = localState.value
+
+  if (!localState.isSliding && localState.externalValue !== value) {
+    localValue = value
+    setLocalState({
+      externalValue: value,
+      isSliding: false,
+      value,
+    })
+  }
+
+  const displayValue = Math.min(max, Math.max(min, localValue))
+  const sliderValue = inverted ? max + min - displayValue : displayValue
+  const virtualRange = (virtualMax ?? max) - min
+  const sliderRange = max - min
+  const sliderWidthPercent =
+    virtualRange > 0
+      ? Math.min(100, Math.max(0, (sliderRange / virtualRange) * 100))
+      : 100
+
+  useEffect(() => {
+    return () => {
+      if (frameRef.current !== null) {
+        cancelAnimationFrame(frameRef.current)
+      }
+    }
+  }, [])
+
+  function commitValue(nextValue: number) {
+    if (frameRef.current !== null) {
+      cancelAnimationFrame(frameRef.current)
+      frameRef.current = null
+    }
+
+    onChange(nextValue)
+  }
+
+  function queueValue(nextValue: number) {
+    setLocalState({
+      externalValue: value,
+      isSliding: true,
+      value: nextValue,
+    })
+
+    if (frameRef.current !== null) {
+      cancelAnimationFrame(frameRef.current)
+    }
+
+    frameRef.current = requestAnimationFrame(() => {
+      frameRef.current = null
+      onChange(nextValue)
+    })
+  }
 
   return (
     <Field>
@@ -158,23 +218,54 @@ export function SliderField({
           id={id}
           label=""
           unit={unit}
-          value={formatNumber(value, digits)}
-          onChange={onChange}
+          value={formatNumber(displayValue, digits)}
+          onChange={(nextValue) => {
+            const clampedValue = Math.min(max, Math.max(min, nextValue))
+
+            setLocalState({
+              externalValue: value,
+              isSliding: false,
+              value: clampedValue,
+            })
+            commitValue(clampedValue)
+          }}
         />
       </SliderHeader>
-      <Slider
-        value={[sliderValue]}
-        min={min}
-        max={max}
-        step={step}
-        onValueChange={(nextValue) => {
-          const rawValue = Array.isArray(nextValue)
-            ? (nextValue[0] ?? min)
-            : nextValue
+      <div
+        className="flex w-full"
+        style={{ justifyContent: inverted ? "end" : "start" }}
+      >
+        <Slider
+          className="shrink-0"
+          value={[sliderValue]}
+          min={min}
+          max={max}
+          step={step}
+          style={{ width: `${sliderWidthPercent}%` }}
+          onValueChange={(nextValue) => {
+            const rawValue = Array.isArray(nextValue)
+              ? (nextValue[0] ?? min)
+              : nextValue
+            const nextDisplayValue = inverted ? max + min - rawValue : rawValue
 
-          onChange(inverted ? max + min - rawValue : rawValue)
-        }}
-      />
+            queueValue(Math.min(max, Math.max(min, nextDisplayValue)))
+          }}
+          onValueCommitted={(nextValue) => {
+            const rawValue = Array.isArray(nextValue)
+              ? (nextValue[0] ?? min)
+              : nextValue
+            const nextDisplayValue = inverted ? max + min - rawValue : rawValue
+            const clampedValue = Math.min(max, Math.max(min, nextDisplayValue))
+
+            setLocalState({
+              externalValue: value,
+              isSliding: false,
+              value: clampedValue,
+            })
+            commitValue(clampedValue)
+          }}
+        />
+      </div>
     </Field>
   )
 }

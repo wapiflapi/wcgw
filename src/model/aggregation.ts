@@ -71,8 +71,8 @@ function createObservationCheckAggregate(): ObservationCheckAggregate {
     invalidCount: 0,
     ballisticsImpactFound: createBooleanCheckAggregate(),
     contactMovingIntoDrumOk: createBooleanCheckAggregate(),
-    rampReliableAccelerationOk: createBooleanCheckAggregate(),
-    rampStaticFrictionOk: createBooleanCheckAggregate(),
+    chuteReliableAccelerationOk: createBooleanCheckAggregate(),
+    chuteStaticFrictionOk: createBooleanCheckAggregate(),
     targetNormalImpactSpeedDeviation_mps: createNumericCheckAggregate(),
     targetReleaseToImpactTimeDeviation_s: createNumericCheckAggregate(),
   }
@@ -93,13 +93,13 @@ function reduceObservationCheckAggregate(
       aggregate.contactMovingIntoDrumOk,
       observation.checks.contactMovingIntoDrumOk
     ),
-    rampReliableAccelerationOk: reduceBooleanCheckAggregate(
-      aggregate.rampReliableAccelerationOk,
-      observation.checks.rampReliableAccelerationOk
+    chuteReliableAccelerationOk: reduceBooleanCheckAggregate(
+      aggregate.chuteReliableAccelerationOk,
+      observation.checks.chuteReliableAccelerationOk
     ),
-    rampStaticFrictionOk: reduceBooleanCheckAggregate(
-      aggregate.rampStaticFrictionOk,
-      observation.checks.rampStaticFrictionOk
+    chuteStaticFrictionOk: reduceBooleanCheckAggregate(
+      aggregate.chuteStaticFrictionOk,
+      observation.checks.chuteStaticFrictionOk
     ),
     targetNormalImpactSpeedDeviation_mps: reduceNumericCheckAggregate(
       aggregate.targetNormalImpactSpeedDeviation_mps,

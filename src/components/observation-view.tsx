@@ -36,15 +36,11 @@ function formatBool(value: boolean | null) {
 }
 
 function formatNullableSpeed_mps(speed_mps: number | null) {
-  return speed_mps === null
-    ? "pending"
-    : `${formatNumber(speed_mps, 4)} m/s`
+  return speed_mps === null ? "pending" : `${formatNumber(speed_mps, 4)} m/s`
 }
 
 function formatNullableTime_s(time_s: number | null) {
-  return time_s === null
-    ? "pending"
-    : `${formatNumber(sToMs(time_s), 1)} ms`
+  return time_s === null ? "pending" : `${formatNumber(sToMs(time_s), 1)} ms`
 }
 
 function boolTone(value: boolean | null): ObservationItem["tone"] {
@@ -239,14 +235,14 @@ export function ObservationView({
             emphasis: "target",
           },
           {
-            label: "Ramp acceleration",
-            value: formatBool(observation.checks.rampReliableAccelerationOk),
-            tone: boolTone(observation.checks.rampReliableAccelerationOk),
+            label: "Chute acceleration",
+            value: formatBool(observation.checks.chuteReliableAccelerationOk),
+            tone: boolTone(observation.checks.chuteReliableAccelerationOk),
           },
           {
-            label: "Ramp static friction",
-            value: formatBool(observation.checks.rampStaticFrictionOk),
-            tone: boolTone(observation.checks.rampStaticFrictionOk),
+            label: "Chute static friction",
+            value: formatBool(observation.checks.chuteStaticFrictionOk),
+            tone: boolTone(observation.checks.chuteStaticFrictionOk),
           },
           {
             label: "Ballistic impact",

@@ -11,12 +11,11 @@ const MODEL_INPUT_HASH_ALIASES = {
   targetReleaseToImpactTime_s: "rt",
   targetReleaseToImpactTimeTolerance_s: "rtt",
   targetNormalImpactSpeed_mps: "is",
-  rampAngle_rad: "ra",
-  rampLength_m: "rl",
-  releasePoint_x_m: "rx",
-  releasePoint_y_m: "ry",
-  impactPoint_x_m: "ix",
-  impactPoint_y_m: "iy",
+  chuteEntryAngle_rad: "cea",
+  chuteBendEnabled: "cbe",
+  chuteEntryLength_m: "cel",
+  chuteBendRadius_m: "cbr",
+  chuteBendAngle_rad: "cba",
   drumTiltAngle_rad: "dt",
   drumPivotArmLength_m: "dpa",
   drumPivotAngleRange_rad: "dpr",
@@ -31,10 +30,10 @@ const MODEL_INPUT_HASH_ALIASES = {
   staticFrictionCoefficientTolerance_ratio: "sft",
   kineticFrictionCoefficient_ratio: "kf",
   kineticFrictionCoefficientTolerance_ratio: "kft",
-  minimumReliableRampAcceleration_mps2: "mra",
-  minimumReliableRampAccelerationTolerance_mps2: "mrat",
-  rampEnergyEfficiency_ratio: "re",
-  rampEnergyEfficiencyTolerance_ratio: "ret",
+  minimumReliableChuteAcceleration_mps2: "mca",
+  minimumReliableChuteAccelerationTolerance_mps2: "mcat",
+  chuteEnergyEfficiency_ratio: "cee",
+  chuteEnergyEfficiencyTolerance_ratio: "ceet",
   impactRestitutionCoefficient_ratio: "ir",
   impactRestitutionCoefficientTolerance_ratio: "irt",
   impactFrictionCoefficient_ratio: "if",
@@ -66,6 +65,13 @@ function parseModelInputHash(hash: string): ModelInput {
 
     if (rawValue === null || rawValue.trim() === "") {
       return nextModelInput
+    }
+
+    if (typeof defaultModelInput[key] === "boolean") {
+      return {
+        ...nextModelInput,
+        [key]: rawValue === "true" || rawValue === "1",
+      }
     }
 
     const parsedValue = Number(rawValue)

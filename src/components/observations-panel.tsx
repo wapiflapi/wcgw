@@ -27,6 +27,7 @@ import { sToMs } from "@/model/units"
 type ObservationsPanelProps = {
   blueprint: Blueprint | null
   observations: ObservationAggregate | null
+  solveError: string | null
   timingTolerance_s: number
 }
 
@@ -102,8 +103,8 @@ function hasObservationProblems(
     checkAggregate.invalidCount > 0 ||
     checkAggregate.ballisticsImpactFound.failedCount > 0 ||
     checkAggregate.contactMovingIntoDrumOk.failedCount > 0 ||
-    checkAggregate.rampReliableAccelerationOk.failedCount > 0 ||
-    checkAggregate.rampStaticFrictionOk.failedCount > 0 ||
+    checkAggregate.chuteReliableAccelerationOk.failedCount > 0 ||
+    checkAggregate.chuteStaticFrictionOk.failedCount > 0 ||
     timingOutsideTolerance
   )
 }
@@ -113,7 +114,7 @@ function TargetStatsRows({ items }: { items: NumericCheckItem[] }) {
     <table className="w-full border-separate border-spacing-0">
       <thead>
         <tr className="text-muted-foreground">
-          <th className="pb-1 pr-4 text-left font-normal" scope="col">
+          <th className="pr-4 pb-1 text-left font-normal" scope="col">
             Metric
           </th>
           <th className="pb-1 text-right font-normal" scope="col">
@@ -206,7 +207,7 @@ function CheckFailureRows({ items }: { items: BooleanCheckItem[] }) {
     <table className="w-full border-separate border-spacing-0">
       <thead>
         <tr className="text-muted-foreground">
-          <th className="pb-1 pr-4 text-left font-normal" scope="col">
+          <th className="pr-4 pb-1 text-left font-normal" scope="col">
             Check
           </th>
           <th className="pb-1 text-right font-normal" scope="col">
@@ -309,7 +310,11 @@ function formatObservationStatus(observation: Observation | null) {
   return observation.valid ? "valid" : "invalid"
 }
 
-function SimulationOverview({ observations }: { observations: ObservationAggregate }) {
+function SimulationOverview({
+  observations,
+}: {
+  observations: ObservationAggregate
+}) {
   const completed = observations.completedRuns >= observations.requestedRuns
 
   return (
@@ -330,15 +335,21 @@ function SimulationOverview({ observations }: { observations: ObservationAggrega
 }
 
 function ObservationAggregateView({
+  disabledReason,
   expandObservationDetails = false,
   observations,
   timingTolerance_s,
 }: {
+  disabledReason?: string
   expandObservationDetails?: boolean
   observations: ObservationAggregate | null
   timingTolerance_s: number
 }) {
   if (observations === null) {
+    if (disabledReason) {
+      return <p className="text-muted-foreground">{disabledReason}</p>
+    }
+
     return <p className="text-muted-foreground">Observations pending</p>
   }
 
@@ -384,12 +395,12 @@ function ObservationAggregateView({
               },
             },
             {
-              label: "Ramp acceleration",
-              aggregate: checkAggregate.rampReliableAccelerationOk,
+              label: "Chute acceleration",
+              aggregate: checkAggregate.chuteReliableAccelerationOk,
             },
             {
-              label: "Ramp static friction",
-              aggregate: checkAggregate.rampStaticFrictionOk,
+              label: "Chute static friction",
+              aggregate: checkAggregate.chuteStaticFrictionOk,
             },
             {
               label: "Ballistic impact",
@@ -474,9 +485,13 @@ async function copyElementToClipboard(element: HTMLElement) {
 export function ObservationsPanel({
   blueprint,
   observations,
+  solveError,
   timingTolerance_s,
 }: ObservationsPanelProps) {
   const hasProblems = hasObservationProblems(observations, timingTolerance_s)
+  const simulationDisabledReason = blueprint?.chuteBendEnabled
+    ? "Simulation is disabled for bent chutes."
+    : undefined
   const exportRef = useRef<HTMLDivElement>(null)
 
   async function copyExport() {
@@ -533,7 +548,7 @@ export function ObservationsPanel({
 
         <TabsContent value="blueprint">
           <FieldGroup>
-            <BlueprintPanel blueprint={blueprint} />
+            <BlueprintPanel blueprint={blueprint} solveError={solveError} />
             <ObservationCollapsibleList
               items={[
                 {
@@ -550,6 +565,7 @@ export function ObservationsPanel({
         </TabsContent>
         <TabsContent value="observations">
           <ObservationAggregateView
+            disabledReason={simulationDisabledReason}
             observations={observations}
             timingTolerance_s={timingTolerance_s}
           />
@@ -563,7 +579,11 @@ export function ObservationsPanel({
       >
         <h2>Blueprint</h2>
         <FieldGroup>
-          <BlueprintPanel blueprint={blueprint} expandOtherValues />
+          <BlueprintPanel
+            blueprint={blueprint}
+            expandOtherValues
+            solveError={solveError}
+          />
           <ObservationCollapsibleList
             exportSpacing
             forceOpen
@@ -580,6 +600,7 @@ export function ObservationsPanel({
         </FieldGroup>
         <h2>Observations</h2>
         <ObservationAggregateView
+          disabledReason={simulationDisabledReason}
           expandObservationDetails
           observations={observations}
           timingTolerance_s={timingTolerance_s}

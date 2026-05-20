@@ -16,6 +16,7 @@ export function usePipeline(
     null
   )
   const [observationsStale, setObservationsStale] = useState(false)
+  const [solveError, setSolveError] = useState<string | null>(null)
   const workerApiRef = useRef<PipelineWorkerApi | null>(null)
 
   useEffect(() => {
@@ -51,8 +52,18 @@ export function usePipeline(
         }
 
         if (event.type === "blueprint") {
-          setBlueprint(event.blueprint)
-          setObservationsStale(true)
+          if (event.result.type === "invalid") {
+            setBlueprint(null)
+            setSolveError(event.result.reason)
+            setObservations(null)
+            setObservationsStale(false)
+            return
+          }
+
+          setBlueprint(event.result.value)
+          setSolveError(null)
+          setObservations(null)
+          setObservationsStale(!event.result.value.chuteBendEnabled)
           return
         }
 
@@ -70,5 +81,6 @@ export function usePipeline(
     blueprint,
     observations,
     observationsStale,
+    solveError,
   }
 }

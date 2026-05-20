@@ -1,5 +1,6 @@
-import { Info } from "@phosphor-icons/react"
+import { Info, WarningCircle } from "@phosphor-icons/react"
 
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import {
   FieldError,
   FieldGroup,
@@ -27,13 +28,22 @@ import {
   getFreeFallHeightFromSpeed_m,
   getFreeFallSpeedFromHeight_m,
 } from "@/model/free-fall"
+import { clampInputValue, getBendInputRanges } from "@/model/input-constraints"
 import { getSphereMass_g, isMassWithinRelativeTolerance } from "@/model/marble"
 import type { ModelInput } from "@/model/model"
-import { degToModelRad, mToMm, mmToM, msToS, radToDeg, sToMs } from "@/model/units"
+import {
+  degToModelRad,
+  mToMm,
+  mmToM,
+  msToS,
+  radToDeg,
+  sToMs,
+} from "@/model/units"
 
 type DesignPanelProps = {
   modelInput: ModelInput
   onModelInputChange: (modelInput: ModelInput) => void
+  solveError: string | null
 }
 
 type ValueWithToleranceFieldProps = {
@@ -112,30 +122,79 @@ function ValueWithToleranceField({
   )
 }
 
+function SolveErrorAlert({ message }: { message: string }) {
+  const [summary, ...details] = message.split("\n").filter(Boolean)
+  const detail = details.join(" ")
+
+  return (
+    <Alert>
+      <WarningCircle className="text-destructive" />
+      <AlertTitle className="text-destructive">{summary}</AlertTitle>
+      {detail ? (
+        <AlertDescription className="text-foreground">
+          {detail}
+        </AlertDescription>
+      ) : null}
+    </Alert>
+  )
+}
+
 export function DesignPanel({
   modelInput,
   onModelInputChange,
+  solveError,
 }: DesignPanelProps) {
-  function updateInput(key: keyof ModelInput, value: number) {
+  function updateInput<Key extends keyof ModelInput>(
+    key: Key,
+    value: ModelInput[Key]
+  ) {
     onModelInputChange({
       ...modelInput,
       [key]: value,
     })
   }
 
-  function updateInputs(updates: Partial<Record<keyof ModelInput, number>>) {
-    onModelInputChange(
-      Object.entries(updates).reduce<ModelInput>(
-        (nextModelInput, [key, value]) => ({
-          ...nextModelInput,
-          [key]: value,
-        }),
-        modelInput
-      )
-    )
+  function updateInputs(updates: Partial<ModelInput>) {
+    onModelInputChange({
+      ...modelInput,
+      ...updates,
+    })
   }
 
   const gravity_mps2 = modelInput.gravity_mps2
+  const bendInputRanges = getBendInputRanges(modelInput)
+  const minimumChuteBendRadius_mm = mToMm(bendInputRanges.chuteBendRadius_m.min)
+  const maximumChuteBendRadius_mm = mToMm(bendInputRanges.chuteBendRadius_m.max)
+  const chuteBendRadiusStep_mm = 1
+  const minimumChuteEntryLength_mm = mToMm(
+    bendInputRanges.chuteEntryLength_m.min
+  )
+  const maximumChuteEntryLength_mm = mToMm(
+    bendInputRanges.chuteEntryLength_m.max
+  )
+  const chuteEntryLengthStep_mm = 1
+  const bendEntryAngle_rad = clampInputValue(
+    modelInput.chuteEntryAngle_rad,
+    bendInputRanges.chuteEntryAngle_rad
+  )
+  const bendEntryAngle_deg = radToDeg(bendEntryAngle_rad)
+  const maximumBendEntryAngle_deg = radToDeg(
+    bendInputRanges.chuteEntryAngle_rad.max
+  )
+  const bendAngle_rad = clampInputValue(
+    modelInput.chuteBendAngle_rad,
+    bendInputRanges.chuteBendAngle_rad
+  )
+  const bendAngle_deg = radToDeg(bendAngle_rad)
+  const maximumBendAngle_deg = radToDeg(bendInputRanges.chuteBendAngle_rad.max)
+  const bendRadius_m = clampInputValue(
+    modelInput.chuteBendRadius_m,
+    bendInputRanges.chuteBendRadius_m
+  )
+  const bendEntryLength_m = clampInputValue(
+    modelInput.chuteEntryLength_m,
+    bendInputRanges.chuteEntryLength_m
+  )
   const expectedMarbleMass_g = getSphereMass_g(
     modelInput.marbleDiameter_m,
     modelInput.marbleDensity_kgpm3
@@ -327,7 +386,7 @@ export function DesignPanel({
                 id="targetNormalImpactSpeed_mps"
                 label={
                   <InfoLabel why="The speed into the drum surface normal. The solver uses this as the punch target and observations check the simulated impact against it.">
-                    Normal impact speed
+                    Impact speed
                   </InfoLabel>
                 }
                 unit="m/s"
@@ -340,24 +399,140 @@ export function DesignPanel({
           </FieldSet>
 
           <FieldSet>
-            <FieldLegend>Ramp</FieldLegend>
-            <SliderField
-              id="rampAngle_deg"
-              label={
-                <InfoLabel why="Sets the ramp direction and how much gravity accelerates the marble along the ramp before launch.">
-                  Ramp angle
-                </InfoLabel>
-              }
-              unit="deg"
-              value={radToDeg(modelInput.rampAngle_rad)}
-              min={-90}
-              max={0}
-              step={1}
-              inverted
-              onChange={(angle_deg) => {
-                updateInput("rampAngle_rad", degToModelRad(angle_deg))
+            <Tabs
+              className="gap-4"
+              value={modelInput.chuteBendEnabled ? "bend" : "straight"}
+              onValueChange={(value) => {
+                const bendEnabled = value === "bend"
+
+                updateInputs({
+                  chuteBendEnabled: bendEnabled,
+                })
               }}
-            />
+            >
+              <div className="flex items-center justify-between gap-4">
+                <div className="text-sm font-medium">Chute</div>
+                <TabsList>
+                  <TabsTrigger value="straight">Straight</TabsTrigger>
+                  <TabsTrigger value="bend">Bend</TabsTrigger>
+                </TabsList>
+              </div>
+              <TabsContent value="straight">
+                <SliderField
+                  id="straightChuteEntryAngle_deg"
+                  label={
+                    <InfoLabel why="Sets the initial chute direction and how much gravity accelerates the marble before launch.">
+                      Entry angle
+                    </InfoLabel>
+                  }
+                  unit="deg"
+                  value={radToDeg(modelInput.chuteEntryAngle_rad)}
+                  min={-90}
+                  max={0}
+                  step={1}
+                  inverted
+                  onChange={(angle_deg) => {
+                    updateInput("chuteEntryAngle_rad", degToModelRad(angle_deg))
+                  }}
+                />
+              </TabsContent>
+              <TabsContent value="bend">
+                <FieldGroup>
+                  <SliderField
+                    id="bendChuteEntryAngle_deg"
+                    label={
+                      <InfoLabel why="Sets the initial chute direction and how much gravity accelerates the marble before launch.">
+                        Entry angle
+                      </InfoLabel>
+                    }
+                    unit="deg"
+                    value={bendEntryAngle_deg}
+                    min={-90}
+                    max={maximumBendEntryAngle_deg}
+                    step={1}
+                    inverted
+                    virtualMax={0}
+                    onChange={(angle_deg) => {
+                      updateInput(
+                        "chuteEntryAngle_rad",
+                        clampInputValue(
+                          degToModelRad(angle_deg),
+                          bendInputRanges.chuteEntryAngle_rad
+                        )
+                      )
+                    }}
+                  />
+                  <SliderField
+                    id="chuteBendAngle_deg"
+                    label={
+                      <InfoLabel why="Sets how far the bend turns from the entry direction toward a flatter launch. Smaller values look closer to a straight chute.">
+                        Bend angle
+                      </InfoLabel>
+                    }
+                    unit="deg"
+                    value={bendAngle_deg}
+                    min={0}
+                    max={maximumBendAngle_deg}
+                    step={1}
+                    virtualMax={90}
+                    onChange={(angle_deg) => {
+                      updateInput(
+                        "chuteBendAngle_rad",
+                        clampInputValue(
+                          degToModelRad(angle_deg),
+                          bendInputRanges.chuteBendAngle_rad
+                        )
+                      )
+                    }}
+                  />
+                  <SliderField
+                    id="chuteEntryLength_mm"
+                    label={
+                      <InfoLabel why="Straight chute length before the bend. Set to zero when the chute should start directly on the curve.">
+                        Entry run
+                      </InfoLabel>
+                    }
+                    unit="mm"
+                    value={mToMm(bendEntryLength_m)}
+                    min={minimumChuteEntryLength_mm}
+                    max={maximumChuteEntryLength_mm}
+                    step={chuteEntryLengthStep_mm}
+                    onChange={(length_mm) => {
+                      updateInput(
+                        "chuteEntryLength_m",
+                        clampInputValue(
+                          mmToM(length_mm),
+                          bendInputRanges.chuteEntryLength_m
+                        )
+                      )
+                    }}
+                  />
+                  <SliderField
+                    id="chuteBendRadius_mm"
+                    label={
+                      <InfoLabel why="Radius of the curved bend. Smaller values make a tighter turn; larger values make the chute closer to a straight path.">
+                        Bend size
+                      </InfoLabel>
+                    }
+                    unit="mm"
+                    value={mToMm(bendRadius_m)}
+                    min={minimumChuteBendRadius_mm}
+                    max={maximumChuteBendRadius_mm}
+                    step={chuteBendRadiusStep_mm}
+                    onChange={(radius_mm) => {
+                      updateInput(
+                        "chuteBendRadius_m",
+                        clampInputValue(
+                          mmToM(radius_mm),
+                          bendInputRanges.chuteBendRadius_m
+                        )
+                      )
+                    }}
+                  />
+                </FieldGroup>
+              </TabsContent>
+              {solveError ? <SolveErrorAlert message={solveError} /> : null}
+            </Tabs>
           </FieldSet>
 
           <FieldSet>
@@ -536,7 +711,7 @@ export function DesignPanel({
               <NumberField
                 id="gravity_mps2"
                 label={
-                  <InfoLabel why="Used for free-fall conversions, blueprint solving, ramp acceleration, and ballistic trajectories.">
+                  <InfoLabel why="Used for free-fall conversions, blueprint solving, chute acceleration, and ballistic trajectories.">
                     Gravity
                   </InfoLabel>
                 }
@@ -566,30 +741,30 @@ export function DesignPanel({
             <FieldLegend>Roll</FieldLegend>
             <FieldGroup>
               <ValueWithToleranceField
-                id="rampEnergyEfficiency_ratio"
+                id="chuteEnergyEfficiency_ratio"
                 label={
-                  <InfoLabel why="Scales the ideal rolling acceleration along the ramp. Lower values mean more energy lost before launch.">
-                    Ramp efficiency
+                  <InfoLabel why="Scales the ideal rolling acceleration along the chute. Lower values mean more energy lost before launch.">
+                    Chute efficiency
                   </InfoLabel>
                 }
-                value={formatNumber(modelInput.rampEnergyEfficiency_ratio, 2)}
-                toleranceId="rampEnergyEfficiencyTolerance_ratio"
+                value={formatNumber(modelInput.chuteEnergyEfficiency_ratio, 2)}
+                toleranceId="chuteEnergyEfficiencyTolerance_ratio"
                 toleranceValue={formatNumber(
-                  modelInput.rampEnergyEfficiencyTolerance_ratio,
+                  modelInput.chuteEnergyEfficiencyTolerance_ratio,
                   2
                 )}
-                toleranceWhy="A 3D printed ABS ramp can lose energy through roughness, layer lines, seams, and a messy launch."
+                toleranceWhy="A 3D printed ABS chute can lose energy through roughness, layer lines, seams, and a messy launch."
                 onValueChange={(efficiency) => {
-                  updateInput("rampEnergyEfficiency_ratio", efficiency)
+                  updateInput("chuteEnergyEfficiency_ratio", efficiency)
                 }}
                 onToleranceChange={(tolerance) => {
-                  updateInput("rampEnergyEfficiencyTolerance_ratio", tolerance)
+                  updateInput("chuteEnergyEfficiencyTolerance_ratio", tolerance)
                 }}
               />
               <ValueWithToleranceField
                 id="staticFrictionCoefficient_ratio"
                 label={
-                  <InfoLabel why="Used to decide whether the marble can roll without slipping on the ramp.">
+                  <InfoLabel why="Used to decide whether the marble can roll without slipping on the chute.">
                     Static friction
                   </InfoLabel>
                 }
@@ -617,7 +792,7 @@ export function DesignPanel({
               <ValueWithToleranceField
                 id="kineticFrictionCoefficient_ratio"
                 label={
-                  <InfoLabel why="Used when the marble is sliding on the ramp. It sets the sliding acceleration and spin-up rate.">
+                  <InfoLabel why="Used when the marble is sliding on the chute. It sets the sliding acceleration and spin-up rate.">
                     Kinetic friction
                   </InfoLabel>
                 }
@@ -643,32 +818,32 @@ export function DesignPanel({
                 }}
               />
               <ValueWithToleranceField
-                id="minimumReliableRampAcceleration_mps2"
+                id="minimumReliableChuteAcceleration_mps2"
                 label={
-                  <InfoLabel why="Used as a reliability check for shallow ramps where ideal math may say motion happens but the real marble may stick or chatter.">
+                  <InfoLabel why="Used as a reliability check for shallow chutes where ideal math may say motion happens but the real marble may stick or chatter.">
                     Minimum reliable acceleration
                   </InfoLabel>
                 }
                 unit="m/s^2"
                 value={formatNumber(
-                  modelInput.minimumReliableRampAcceleration_mps2,
+                  modelInput.minimumReliableChuteAcceleration_mps2,
                   2
                 )}
-                toleranceId="minimumReliableRampAccelerationTolerance_mps2"
+                toleranceId="minimumReliableChuteAccelerationTolerance_mps2"
                 toleranceValue={formatNumber(
-                  modelInput.minimumReliableRampAccelerationTolerance_mps2,
+                  modelInput.minimumReliableChuteAccelerationTolerance_mps2,
                   2
                 )}
-                toleranceWhy="This catches shallow ramps where real marbles may stick, chatter, or need a nudge despite ideal math."
+                toleranceWhy="This catches shallow chutes where real marbles may stick, chatter, or need a nudge despite ideal math."
                 onValueChange={(acceleration_mps2) => {
                   updateInput(
-                    "minimumReliableRampAcceleration_mps2",
+                    "minimumReliableChuteAcceleration_mps2",
                     acceleration_mps2
                   )
                 }}
                 onToleranceChange={(tolerance_mps2) => {
                   updateInput(
-                    "minimumReliableRampAccelerationTolerance_mps2",
+                    "minimumReliableChuteAccelerationTolerance_mps2",
                     tolerance_mps2
                   )
                 }}
@@ -676,7 +851,7 @@ export function DesignPanel({
               <ValueWithToleranceField
                 id="rollingInertiaFactor_ratio"
                 label={
-                  <InfoLabel why="Converts gravity along the ramp into rolling acceleration and relates ramp speed to marble spin. A solid sphere is 5/7.">
+                  <InfoLabel why="Converts gravity along the chute into rolling acceleration and relates chute speed to marble spin. A solid sphere is 5/7.">
                     Rolling inertia
                   </InfoLabel>
                 }
