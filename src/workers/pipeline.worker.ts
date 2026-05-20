@@ -4,6 +4,7 @@ import {
   type ObservationAggregate,
   type Blueprint,
   type ModelInput,
+  type SolveResult,
 } from "@/model/model"
 import {
   createObservationAggregate,
@@ -19,7 +20,7 @@ import { solveBlueprint } from "@/model/solve"
 
 export type PipelineEvent =
   | {
-      blueprint: Blueprint
+      result: SolveResult<Blueprint>
       type: "blueprint"
     }
   | {
@@ -28,7 +29,7 @@ export type PipelineEvent =
     }
 
 export type PipelineWorkerApi = {
-  computeBlueprint: (input: ModelInput) => Promise<Blueprint>
+  computeBlueprint: (input: ModelInput) => Promise<SolveResult<Blueprint>>
   runPipeline: (
     input: ModelInput,
     options: PipelineRunOptions,
@@ -78,16 +79,22 @@ const api: PipelineWorkerApi = {
 
   async runPipeline(input, options, onEvent) {
     const runId = ++activeRunId
-    const blueprint = solveBlueprint(input)
-    let observations = createObservationAggregate(
-      options.observationRequestedRuns
-    )
+    const blueprintResult = solveBlueprint(input)
 
     if (runId !== activeRunId) {
       return
     }
 
-    onEvent({ blueprint, type: "blueprint" })
+    onEvent({ result: blueprintResult, type: "blueprint" })
+
+    if (blueprintResult.type === "invalid") {
+      return
+    }
+
+    const blueprint = blueprintResult.value
+    let observations = createObservationAggregate(
+      options.observationRequestedRuns
+    )
 
     const nominalRealization = createNominalBlueprintRealization(blueprint)
 

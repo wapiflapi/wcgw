@@ -18,7 +18,7 @@ type SchematicGeometry = {
   drumLineA: Point_m
   drumLineB: Point_m
   impactPoint: Point_m
-  rampExit: Point_m
+  chuteExit: Point_m
   releasePoint: Point_m
 }
 
@@ -27,8 +27,8 @@ type SchematicElements = {
   drumLineA: JXG.Point
   drumLineB: JXG.Point
   impactPoint: JXG.Point
-  rampExit: JXG.Point
-  rampSegment: JXG.GeometryElement
+  chuteExit: JXG.Point
+  chuteSegment: JXG.GeometryElement
   releasePoint: JXG.Point
 }
 
@@ -92,8 +92,8 @@ function isObservationOk(observation: Observation) {
 
   return (
     observation.valid &&
-    isNullableBooleanCheckOk(checks.rampReliableAccelerationOk) &&
-    isNullableBooleanCheckOk(checks.rampStaticFrictionOk) &&
+    isNullableBooleanCheckOk(checks.chuteReliableAccelerationOk) &&
+    isNullableBooleanCheckOk(checks.chuteStaticFrictionOk) &&
     isNullableBooleanCheckOk(checks.ballisticsImpactFound) &&
     isNullableBooleanCheckOk(checks.contactMovingIntoDrumOk) &&
     isNullableDeviationOk(
@@ -148,14 +148,14 @@ function getSchematicGeometry(blueprint: Blueprint): SchematicGeometry {
     x_m: blueprint.impactPoint_x_m.nominal,
     y_m: blueprint.impactPoint_y_m.nominal,
   }
-  const rampExit = {
+  const chuteExit = {
     x_m:
       releasePoint.x_m +
-      blueprint.rampLength_m.nominal *
+      blueprint.chuteEntryLength_m.nominal *
         Math.cos(blueprint.chuteEntryAngle_rad.nominal),
     y_m:
       releasePoint.y_m +
-      blueprint.rampLength_m.nominal *
+      blueprint.chuteEntryLength_m.nominal *
         Math.sin(blueprint.chuteEntryAngle_rad.nominal),
   }
   const drumTiltAngle_rad = blueprint.drumTiltAngle_rad.nominal
@@ -175,7 +175,7 @@ function getSchematicGeometry(blueprint: Blueprint): SchematicGeometry {
     drumSurfaceContact,
     drumTiltAngle_rad
   )
-  const finitePoints = [releasePoint, rampExit, impactPoint]
+  const finitePoints = [releasePoint, chuteExit, impactPoint]
   const xs = finitePoints.map((point) => point.x_m)
   const ys = finitePoints.map((point) => point.y_m)
   const minX_m = Math.min(...xs)
@@ -199,7 +199,7 @@ function getSchematicGeometry(blueprint: Blueprint): SchematicGeometry {
     drumLineA: drumLine.a,
     drumLineB: drumLine.b,
     impactPoint,
-    rampExit,
+    chuteExit,
     releasePoint,
   }
 }
@@ -253,10 +253,10 @@ function createSchematicElements(
     4
   )
   const impactPoint = createVisiblePoint(board, geometry.impactPoint, colors, 3)
-  const rampExit = createHiddenPoint(board, geometry.rampExit)
+  const chuteExit = createHiddenPoint(board, geometry.chuteExit)
   const drumLineA = createHiddenPoint(board, geometry.drumLineA)
   const drumLineB = createHiddenPoint(board, geometry.drumLineB)
-  const rampSegment = board.create("segment", [releasePoint, rampExit], {
+  const chuteSegment = board.create("segment", [releasePoint, chuteExit], {
     fixed: true,
     highlightStrokeColor: colors.primary,
     strokeColor: colors.primary,
@@ -274,8 +274,8 @@ function createSchematicElements(
     drumLineA,
     drumLineB,
     impactPoint,
-    rampExit,
-    rampSegment,
+    chuteExit,
+    chuteSegment,
     releasePoint,
   }
 }
@@ -596,11 +596,11 @@ function removeSchematicElements(
   elements: SchematicElements
 ) {
   board.removeObject([
-    elements.rampSegment,
+    elements.chuteSegment,
     elements.drumLine,
     elements.releasePoint,
     elements.impactPoint,
-    elements.rampExit,
+    elements.chuteExit,
     elements.drumLineA,
     elements.drumLineB,
   ])
@@ -613,7 +613,7 @@ function updateSchematicElements(
 ) {
   movePoint(elements.releasePoint, geometry.releasePoint)
   movePoint(elements.impactPoint, geometry.impactPoint)
-  movePoint(elements.rampExit, geometry.rampExit)
+  movePoint(elements.chuteExit, geometry.chuteExit)
   movePoint(elements.drumLineA, geometry.drumLineA)
   movePoint(elements.drumLineB, geometry.drumLineB)
   board.setBoundingBox(geometry.bounds, true)

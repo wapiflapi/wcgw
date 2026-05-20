@@ -1,5 +1,6 @@
-import { Info } from "@phosphor-icons/react"
+import { Info, WarningCircle } from "@phosphor-icons/react"
 
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import {
   FieldError,
   FieldGroup,
@@ -42,6 +43,7 @@ import {
 type DesignPanelProps = {
   modelInput: ModelInput
   onModelInputChange: (modelInput: ModelInput) => void
+  solveError: string | null
 }
 
 type ValueWithToleranceFieldProps = {
@@ -120,9 +122,27 @@ function ValueWithToleranceField({
   )
 }
 
+function SolveErrorAlert({ message }: { message: string }) {
+  const [summary, ...details] = message.split("\n").filter(Boolean)
+  const detail = details.join(" ")
+
+  return (
+    <Alert>
+      <WarningCircle className="text-destructive" />
+      <AlertTitle className="text-destructive">{summary}</AlertTitle>
+      {detail ? (
+        <AlertDescription className="text-foreground">
+          {detail}
+        </AlertDescription>
+      ) : null}
+    </Alert>
+  )
+}
+
 export function DesignPanel({
   modelInput,
   onModelInputChange,
+  solveError,
 }: DesignPanelProps) {
   function updateInput<Key extends keyof ModelInput>(
     key: Key,
@@ -376,6 +396,7 @@ export function DesignPanel({
                   <TabsTrigger value="bend">Bend</TabsTrigger>
                 </TabsList>
               </div>
+              {solveError ? <SolveErrorAlert message={solveError} /> : null}
               <TabsContent value="straight">
                 <SliderField
                   id="straightChuteEntryAngle_deg"
@@ -455,7 +476,7 @@ export function DesignPanel({
                   <SliderField
                     id="chuteExitAngle_deg"
                     label={
-                      <InfoLabel why="Sets the chute direction after the bend. The current solver scaffolding still uses the entry angle only.">
+                      <InfoLabel why="Sets the chute direction after the bend and aims the marble toward the drum.">
                         Exit angle
                       </InfoLabel>
                     }
@@ -653,7 +674,7 @@ export function DesignPanel({
               <NumberField
                 id="gravity_mps2"
                 label={
-                  <InfoLabel why="Used for free-fall conversions, blueprint solving, ramp acceleration, and ballistic trajectories.">
+                  <InfoLabel why="Used for free-fall conversions, blueprint solving, chute acceleration, and ballistic trajectories.">
                     Gravity
                   </InfoLabel>
                 }
@@ -683,30 +704,30 @@ export function DesignPanel({
             <FieldLegend>Roll</FieldLegend>
             <FieldGroup>
               <ValueWithToleranceField
-                id="rampEnergyEfficiency_ratio"
+                id="chuteEnergyEfficiency_ratio"
                 label={
-                  <InfoLabel why="Scales the ideal rolling acceleration along the ramp. Lower values mean more energy lost before launch.">
-                    Ramp efficiency
+                  <InfoLabel why="Scales the ideal rolling acceleration along the chute. Lower values mean more energy lost before launch.">
+                    Chute efficiency
                   </InfoLabel>
                 }
-                value={formatNumber(modelInput.rampEnergyEfficiency_ratio, 2)}
-                toleranceId="rampEnergyEfficiencyTolerance_ratio"
+                value={formatNumber(modelInput.chuteEnergyEfficiency_ratio, 2)}
+                toleranceId="chuteEnergyEfficiencyTolerance_ratio"
                 toleranceValue={formatNumber(
-                  modelInput.rampEnergyEfficiencyTolerance_ratio,
+                  modelInput.chuteEnergyEfficiencyTolerance_ratio,
                   2
                 )}
-                toleranceWhy="A 3D printed ABS ramp can lose energy through roughness, layer lines, seams, and a messy launch."
+                toleranceWhy="A 3D printed ABS chute can lose energy through roughness, layer lines, seams, and a messy launch."
                 onValueChange={(efficiency) => {
-                  updateInput("rampEnergyEfficiency_ratio", efficiency)
+                  updateInput("chuteEnergyEfficiency_ratio", efficiency)
                 }}
                 onToleranceChange={(tolerance) => {
-                  updateInput("rampEnergyEfficiencyTolerance_ratio", tolerance)
+                  updateInput("chuteEnergyEfficiencyTolerance_ratio", tolerance)
                 }}
               />
               <ValueWithToleranceField
                 id="staticFrictionCoefficient_ratio"
                 label={
-                  <InfoLabel why="Used to decide whether the marble can roll without slipping on the ramp.">
+                  <InfoLabel why="Used to decide whether the marble can roll without slipping on the chute.">
                     Static friction
                   </InfoLabel>
                 }
@@ -734,7 +755,7 @@ export function DesignPanel({
               <ValueWithToleranceField
                 id="kineticFrictionCoefficient_ratio"
                 label={
-                  <InfoLabel why="Used when the marble is sliding on the ramp. It sets the sliding acceleration and spin-up rate.">
+                  <InfoLabel why="Used when the marble is sliding on the chute. It sets the sliding acceleration and spin-up rate.">
                     Kinetic friction
                   </InfoLabel>
                 }
@@ -760,32 +781,32 @@ export function DesignPanel({
                 }}
               />
               <ValueWithToleranceField
-                id="minimumReliableRampAcceleration_mps2"
+                id="minimumReliableChuteAcceleration_mps2"
                 label={
-                  <InfoLabel why="Used as a reliability check for shallow ramps where ideal math may say motion happens but the real marble may stick or chatter.">
+                  <InfoLabel why="Used as a reliability check for shallow chutes where ideal math may say motion happens but the real marble may stick or chatter.">
                     Minimum reliable acceleration
                   </InfoLabel>
                 }
                 unit="m/s^2"
                 value={formatNumber(
-                  modelInput.minimumReliableRampAcceleration_mps2,
+                  modelInput.minimumReliableChuteAcceleration_mps2,
                   2
                 )}
-                toleranceId="minimumReliableRampAccelerationTolerance_mps2"
+                toleranceId="minimumReliableChuteAccelerationTolerance_mps2"
                 toleranceValue={formatNumber(
-                  modelInput.minimumReliableRampAccelerationTolerance_mps2,
+                  modelInput.minimumReliableChuteAccelerationTolerance_mps2,
                   2
                 )}
-                toleranceWhy="This catches shallow ramps where real marbles may stick, chatter, or need a nudge despite ideal math."
+                toleranceWhy="This catches shallow chutes where real marbles may stick, chatter, or need a nudge despite ideal math."
                 onValueChange={(acceleration_mps2) => {
                   updateInput(
-                    "minimumReliableRampAcceleration_mps2",
+                    "minimumReliableChuteAcceleration_mps2",
                     acceleration_mps2
                   )
                 }}
                 onToleranceChange={(tolerance_mps2) => {
                   updateInput(
-                    "minimumReliableRampAccelerationTolerance_mps2",
+                    "minimumReliableChuteAccelerationTolerance_mps2",
                     tolerance_mps2
                   )
                 }}
@@ -793,7 +814,7 @@ export function DesignPanel({
               <ValueWithToleranceField
                 id="rollingInertiaFactor_ratio"
                 label={
-                  <InfoLabel why="Converts gravity along the ramp into rolling acceleration and relates ramp speed to marble spin. A solid sphere is 5/7.">
+                  <InfoLabel why="Converts gravity along the chute into rolling acceleration and relates chute speed to marble spin. A solid sphere is 5/7.">
                     Rolling inertia
                   </InfoLabel>
                 }

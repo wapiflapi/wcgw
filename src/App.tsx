@@ -18,10 +18,8 @@ const PIPELINE_RUN_OPTIONS: PipelineRunOptions = {
 
 export function App() {
   const [modelInput, setModelInput] = useUrlModelInput()
-  const { blueprint, observations, observationsStale } = usePipeline(
-    modelInput,
-    PIPELINE_RUN_OPTIONS
-  )
+  const { blueprint, observations, observationsStale, solveError } =
+    usePipeline(modelInput, PIPELINE_RUN_OPTIONS)
 
   return (
     <>
@@ -30,6 +28,7 @@ export function App() {
           <DesignPanel
             modelInput={modelInput}
             onModelInputChange={setModelInput}
+            solveError={solveError}
           />
         </section>
         <section className="grid min-h-[420px] min-w-0 grid-rows-[2rem_minmax(0,1fr)] p-4 sm:col-start-2 sm:row-start-1 sm:h-full sm:min-h-0 lg:col-start-2 lg:row-start-1">
@@ -55,6 +54,7 @@ export function App() {
           <ObservationsPanel
             blueprint={blueprint}
             observations={observations}
+            solveError={solveError}
             timingTolerance_s={modelInput.targetReleaseToImpactTimeTolerance_s}
           />
         </section>

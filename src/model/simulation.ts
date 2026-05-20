@@ -62,26 +62,37 @@ function simulateRelease(
   }
 }
 
-function simulateRampUntilDrop(
+function simulateChuteUntilDrop(
   blueprintRealization: BlueprintRealization,
   releaseSnapshot: Snapshot
 ): SimulationStageResult {
-  // Ramp angle, measured from horizontal, positive counterclockwise.
-  const rampAngle_rad = blueprintRealization.chuteEntryAngle_rad
+  if (blueprintRealization.chuteBendEnabled) {
+    return simulateBendChuteUntilDrop(blueprintRealization, releaseSnapshot)
+  }
 
-  // Distance from the release point to the drop point along the ramp.
-  const rampLength_m = blueprintRealization.rampLength_m
+  return simulateStraightChuteUntilDrop(blueprintRealization, releaseSnapshot)
+}
+
+function simulateStraightChuteUntilDrop(
+  blueprintRealization: BlueprintRealization,
+  releaseSnapshot: Snapshot
+): SimulationStageResult {
+  // Chute entry angle, measured from horizontal, positive counterclockwise.
+  const chuteEntryAngle_rad = blueprintRealization.chuteEntryAngle_rad
+
+  // Distance from the release point to the drop point along the straight chute.
+  const chuteLength_m = blueprintRealization.chuteEntryLength_m
 
   // Gravity magnitude.
   const gravity_mps2 = blueprintRealization.gravity_mps2
 
-  // Ramp energy efficiency, where 1 means no rolling loss.
-  const rampEnergyEfficiency_ratio =
-    blueprintRealization.rampEnergyEfficiency_ratio
+  // Chute energy efficiency, where 1 means no rolling loss.
+  const chuteEnergyEfficiency_ratio =
+    blueprintRealization.chuteEnergyEfficiency_ratio
 
   // Minimum acceleration we trust to start motion in the real world.
-  const minimumReliableRampAcceleration_mps2 =
-    blueprintRealization.minimumReliableRampAcceleration_mps2
+  const minimumReliableChuteAcceleration_mps2 =
+    blueprintRealization.minimumReliableChuteAcceleration_mps2
 
   // Rolling acceleration factor, e.g. 5/7 for a solid sphere.
   const rollingInertiaFactor_ratio =
@@ -90,42 +101,44 @@ function simulateRampUntilDrop(
   // Radius lets us convert no-slip linear speed into marble spin.
   const marbleRadius_m = blueprintRealization.marbleDiameter_m / 2
 
-  // Unit direction along the ramp, from release to drop.
-  const rampDirection = {
-    x: Math.cos(rampAngle_rad),
-    y: Math.sin(rampAngle_rad),
+  // Unit direction along the chute, from release to drop.
+  const chuteDirection = {
+    x: Math.cos(chuteEntryAngle_rad),
+    y: Math.sin(chuteEntryAngle_rad),
   }
 
-  // Release velocity projected along the ramp direction.
-  const releaseSpeedAlongRamp_mps =
-    releaseSnapshot.marbleSpeed_x_mps * rampDirection.x +
-    releaseSnapshot.marbleSpeed_y_mps * rampDirection.y
+  // Release velocity projected along the chute direction.
+  const releaseSpeedAlongChute_mps =
+    releaseSnapshot.marbleSpeed_x_mps * chuteDirection.x +
+    releaseSnapshot.marbleSpeed_y_mps * chuteDirection.y
 
-  // Gravity component that accelerates the marble along the ramp.
-  const gravityAlongRamp_mps2 = gravity_mps2 * -Math.sin(rampAngle_rad)
+  // Gravity component that accelerates the marble along the chute.
+  const gravityAlongChute_mps2 = gravity_mps2 * -Math.sin(chuteEntryAngle_rad)
 
-  // Rolling acceleration along the ramp after inertia and losses.
-  const rampAcceleration_mps2 =
-    rampEnergyEfficiency_ratio *
+  // Rolling acceleration along the chute after inertia and losses.
+  const chuteAcceleration_mps2 =
+    chuteEnergyEfficiency_ratio *
     rollingInertiaFactor_ratio *
-    gravityAlongRamp_mps2
+    gravityAlongChute_mps2
 
-  // Gravity component that presses the marble into the ramp.
-  const rampNormalAcceleration_mps2 = gravity_mps2 * Math.cos(rampAngle_rad)
+  // Gravity component that presses the marble into the chute.
+  const chuteNormalAcceleration_mps2 =
+    gravity_mps2 * Math.cos(chuteEntryAngle_rad)
 
   // Static friction provides the torque that makes the marble roll.
   const rollingFrictionAcceleration_mps2 =
-    (1 - rollingInertiaFactor_ratio) * gravityAlongRamp_mps2
+    (1 - rollingInertiaFactor_ratio) * gravityAlongChute_mps2
 
   // Static friction required for rolling without slipping.
-  const rampRequiredStaticFrictionCoefficient_ratio =
-    rampNormalAcceleration_mps2 > 0
-      ? Math.abs(rollingFrictionAcceleration_mps2) / rampNormalAcceleration_mps2
+  const chuteRequiredStaticFrictionCoefficient_ratio =
+    chuteNormalAcceleration_mps2 > 0
+      ? Math.abs(rollingFrictionAcceleration_mps2) /
+        chuteNormalAcceleration_mps2
       : Number.POSITIVE_INFINITY
 
   // Whether the provided friction coefficient is enough for no-slip rolling.
-  const rampStaticFrictionOk =
-    rampRequiredStaticFrictionCoefficient_ratio <=
+  const chuteStaticFrictionOk =
+    chuteRequiredStaticFrictionCoefficient_ratio <=
     blueprintRealization.staticFrictionCoefficient_ratio
 
   // Kinetic friction is used only while the contact patch is sliding.
@@ -141,37 +154,37 @@ function simulateRampUntilDrop(
   // Kinetic friction acceleration scale.
   const kineticFrictionAcceleration_mps2 =
     effectiveKineticFrictionCoefficient_ratio *
-    Math.max(0, rampNormalAcceleration_mps2)
+    Math.max(0, chuteNormalAcceleration_mps2)
 
-  // Existing forward speed means the marble is already moving along the ramp.
-  const rampAlreadyMovingOk = releaseSpeedAlongRamp_mps > 0
+  // Existing forward speed means the marble is already moving along the chute.
+  const chuteAlreadyMovingOk = releaseSpeedAlongChute_mps > 0
 
-  // If we cannot rely on static rolling, the ramp initially uses sliding.
-  const startingSlipSign = gravityAlongRamp_mps2 >= 0 ? 1 : -1
+  // If we cannot rely on static rolling, the chute initially uses sliding.
+  const startingSlipSign = gravityAlongChute_mps2 >= 0 ? 1 : -1
   const startingSlidingAcceleration_mps2 =
-    gravityAlongRamp_mps2 - startingSlipSign * kineticFrictionAcceleration_mps2
+    gravityAlongChute_mps2 - startingSlipSign * kineticFrictionAcceleration_mps2
 
   // Very small acceleration may not overcome real-world imperfections.
-  const rampReliableAccelerationOk =
-    rampAlreadyMovingOk ||
+  const chuteReliableAccelerationOk =
+    chuteAlreadyMovingOk ||
     Math.abs(
-      rampStaticFrictionOk
-        ? rampAcceleration_mps2
+      chuteStaticFrictionOk
+        ? chuteAcceleration_mps2
         : startingSlidingAcceleration_mps2
-    ) >= Math.abs(minimumReliableRampAcceleration_mps2)
+    ) >= Math.abs(minimumReliableChuteAcceleration_mps2)
 
   const checks = {
-    rampReliableAccelerationOk,
-    rampRequiredStaticFrictionCoefficient_ratio,
-    rampStaticFrictionOk,
+    chuteReliableAccelerationOk,
+    chuteRequiredStaticFrictionCoefficient_ratio,
+    chuteStaticFrictionOk,
   }
 
   // A negative distance would mean the blueprint asks us to roll backwards.
-  if (rampLength_m < 0) {
+  if (chuteLength_m < 0) {
     return {
       snapshot: releaseSnapshot,
       checks,
-      invalidReason: "Ramp length is negative.",
+      invalidReason: "Chute length is negative.",
     }
   }
 
@@ -184,13 +197,13 @@ function simulateRampUntilDrop(
     }
   }
 
-  // Near-horizontal ramps may solve on paper but fail to start in practice.
-  if (!rampReliableAccelerationOk) {
+  // Near-horizontal chutes may solve on paper but fail to start in practice.
+  if (!chuteReliableAccelerationOk) {
     return {
       snapshot: releaseSnapshot,
       checks,
       invalidReason:
-        "Ramp acceleration is below the reliable motion threshold.",
+        "Chute acceleration is below the reliable motion threshold.",
     }
   }
 
@@ -250,7 +263,7 @@ function simulateRampUntilDrop(
     return positiveTimes_s.length > 0 ? Math.min(...positiveTimes_s) : null
   }
 
-  type RampSegmentResult = {
+  type ChuteSegmentResult = {
     distance_m: number
     speed_mps: number
     spin_radps: number
@@ -261,11 +274,11 @@ function simulateRampUntilDrop(
     distance_m: number,
     startSpeed_mps: number,
     startSpin_radps: number
-  ): RampSegmentResult | null {
+  ): ChuteSegmentResult | null {
     const segmentTime_s = travelTimeForDistance_s(
       distance_m,
       startSpeed_mps,
-      rampAcceleration_mps2
+      chuteAcceleration_mps2
     )
 
     if (segmentTime_s === null) {
@@ -273,7 +286,7 @@ function simulateRampUntilDrop(
     }
 
     // Kinematic equation: v1 = v0 + a t.
-    const endSpeed_mps = startSpeed_mps + rampAcceleration_mps2 * segmentTime_s
+    const endSpeed_mps = startSpeed_mps + chuteAcceleration_mps2 * segmentTime_s
 
     // No-slip rolling keeps v = omega r.
     const endSpin_radps =
@@ -292,10 +305,10 @@ function simulateRampUntilDrop(
     startSpeed_mps: number,
     startSpin_radps: number,
     slipSign: number
-  ): RampSegmentResult | null {
+  ): ChuteSegmentResult | null {
     // Kinetic friction pushes against the slipping contact patch.
     const segmentAcceleration_mps2 =
-      gravityAlongRamp_mps2 - slipSign * kineticFrictionAcceleration_mps2
+      gravityAlongChute_mps2 - slipSign * kineticFrictionAcceleration_mps2
 
     // The same friction creates torque and changes spin.
     const segmentSpinAcceleration_radps2 =
@@ -328,29 +341,29 @@ function simulateRampUntilDrop(
     }
   }
 
-  // Current spin under our ramp convention.
+  // Current spin under our chute convention.
   const releaseSpin_radps = releaseSnapshot.marbleSpin_radps
 
   // Contact patch slip speed. Zero means v = omega r and pure rolling is possible.
   const releaseSlipSpeed_mps =
-    releaseSpeedAlongRamp_mps - releaseSpin_radps * marbleRadius_m
+    releaseSpeedAlongChute_mps - releaseSpin_radps * marbleRadius_m
 
   // Numerical tolerance for deciding whether contact is already no-slip.
   const slipSpeedTolerance_mps = 1e-9
 
   // Rolling can start immediately only if the state is already no-slip.
   const startsRolling =
-    rampStaticFrictionOk &&
+    chuteStaticFrictionOk &&
     Math.abs(releaseSlipSpeed_mps) <= slipSpeedTolerance_mps
 
-  let exitSpeedAlongRamp_mps: number
+  let exitSpeedAlongChute_mps: number
   let dropSpin_radps: number
-  let rampTime_s: number
+  let chuteTime_s: number
 
   if (startsRolling) {
     const rollingResult = simulateRollingSegment(
-      rampLength_m,
-      releaseSpeedAlongRamp_mps,
+      chuteLength_m,
+      releaseSpeedAlongChute_mps,
       releaseSpin_radps
     )
 
@@ -359,13 +372,13 @@ function simulateRampUntilDrop(
         snapshot: releaseSnapshot,
         checks,
         invalidReason:
-          "Ramp acceleration cannot carry the marble to the drop point.",
+          "Chute acceleration cannot carry the marble to the drop point.",
       }
     }
 
-    exitSpeedAlongRamp_mps = rollingResult.speed_mps
+    exitSpeedAlongChute_mps = rollingResult.speed_mps
     dropSpin_radps = rollingResult.spin_radps
-    rampTime_s = rollingResult.time_s
+    chuteTime_s = rollingResult.time_s
   } else {
     // Positive slip means the marble is outrunning its spin.
     const firstSlipSign =
@@ -375,7 +388,7 @@ function simulateRampUntilDrop(
 
     // Sliding linear acceleration while that slip direction remains true.
     const slidingAcceleration_mps2 =
-      gravityAlongRamp_mps2 - firstSlipSign * kineticFrictionAcceleration_mps2
+      gravityAlongChute_mps2 - firstSlipSign * kineticFrictionAcceleration_mps2
 
     // Sliding angular acceleration while that slip direction remains true.
     const slidingSpinAcceleration_radps2 =
@@ -396,21 +409,21 @@ function simulateRampUntilDrop(
     const distanceUntilNoSlip_m =
       timeUntilNoSlip_s === null
         ? null
-        : releaseSpeedAlongRamp_mps * timeUntilNoSlip_s +
+        : releaseSpeedAlongChute_mps * timeUntilNoSlip_s +
           0.5 * slidingAcceleration_mps2 * timeUntilNoSlip_s ** 2
 
     const canCatchAndRoll =
-      rampStaticFrictionOk &&
+      chuteStaticFrictionOk &&
       timeUntilNoSlip_s !== null &&
       distanceUntilNoSlip_m !== null &&
       timeUntilNoSlip_s >= 0 &&
       distanceUntilNoSlip_m >= 0 &&
-      distanceUntilNoSlip_m <= rampLength_m
+      distanceUntilNoSlip_m <= chuteLength_m
 
     if (canCatchAndRoll) {
       const slidingResult = simulateSlidingSegment(
         distanceUntilNoSlip_m,
-        releaseSpeedAlongRamp_mps,
+        releaseSpeedAlongChute_mps,
         releaseSpin_radps,
         firstSlipSign
       )
@@ -425,7 +438,7 @@ function simulateRampUntilDrop(
       }
 
       const rollingResult = simulateRollingSegment(
-        rampLength_m - slidingResult.distance_m,
+        chuteLength_m - slidingResult.distance_m,
         slidingResult.speed_mps,
         slidingResult.spin_radps
       )
@@ -439,13 +452,13 @@ function simulateRampUntilDrop(
         }
       }
 
-      exitSpeedAlongRamp_mps = rollingResult.speed_mps
+      exitSpeedAlongChute_mps = rollingResult.speed_mps
       dropSpin_radps = rollingResult.spin_radps
-      rampTime_s = slidingResult.time_s + rollingResult.time_s
+      chuteTime_s = slidingResult.time_s + rollingResult.time_s
     } else {
       const slidingResult = simulateSlidingSegment(
-        rampLength_m,
-        releaseSpeedAlongRamp_mps,
+        chuteLength_m,
+        releaseSpeedAlongChute_mps,
         releaseSpin_radps,
         firstSlipSign
       )
@@ -459,43 +472,43 @@ function simulateRampUntilDrop(
         }
       }
 
-      exitSpeedAlongRamp_mps = slidingResult.speed_mps
+      exitSpeedAlongChute_mps = slidingResult.speed_mps
       dropSpin_radps = slidingResult.spin_radps
-      rampTime_s = slidingResult.time_s
+      chuteTime_s = slidingResult.time_s
     }
   }
 
   // Negative or non-finite values mean the kinematics are not physical.
   if (
-    !Number.isFinite(rampTime_s) ||
-    rampTime_s < 0 ||
-    !Number.isFinite(exitSpeedAlongRamp_mps) ||
-    exitSpeedAlongRamp_mps < 0 ||
+    !Number.isFinite(chuteTime_s) ||
+    chuteTime_s < 0 ||
+    !Number.isFinite(exitSpeedAlongChute_mps) ||
+    exitSpeedAlongChute_mps < 0 ||
     !Number.isFinite(dropSpin_radps)
   ) {
     return {
       snapshot: releaseSnapshot,
       checks,
-      invalidReason: "Ramp travel result is invalid.",
+      invalidReason: "Chute travel result is invalid.",
     }
   }
 
-  // Drop position after moving along the ramp by its length.
+  // Drop position after moving along the chute by its length.
   const dropPosition_x_m =
-    releaseSnapshot.marblePosition_x_m + rampDirection.x * rampLength_m
+    releaseSnapshot.marblePosition_x_m + chuteDirection.x * chuteLength_m
 
-  // Drop position after moving along the ramp by its length.
+  // Drop position after moving along the chute by its length.
   const dropPosition_y_m =
-    releaseSnapshot.marblePosition_y_m + rampDirection.y * rampLength_m
+    releaseSnapshot.marblePosition_y_m + chuteDirection.y * chuteLength_m
 
-  // Drop speed vector points along the ramp.
-  const dropSpeed_x_mps = rampDirection.x * exitSpeedAlongRamp_mps
+  // Drop speed vector points along the chute.
+  const dropSpeed_x_mps = chuteDirection.x * exitSpeedAlongChute_mps
 
-  // Drop speed vector points along the ramp.
-  const dropSpeed_y_mps = rampDirection.y * exitSpeedAlongRamp_mps
+  // Drop speed vector points along the chute.
+  const dropSpeed_y_mps = chuteDirection.y * exitSpeedAlongChute_mps
 
   // Simulation time at the drop point.
-  const dropTime_s = releaseSnapshot.time_s + rampTime_s
+  const dropTime_s = releaseSnapshot.time_s + chuteTime_s
 
   return {
     snapshot: {
@@ -509,6 +522,13 @@ function simulateRampUntilDrop(
     checks,
     invalidReason: null,
   }
+}
+
+function simulateBendChuteUntilDrop(
+  blueprintRealization: BlueprintRealization,
+  releaseSnapshot: Snapshot
+): SimulationStageResult {
+  return simulateStraightChuteUntilDrop(blueprintRealization, releaseSnapshot)
 }
 
 function simulateBallisticsUntilImpact(
@@ -855,11 +875,11 @@ export function runSimulationStep(
 
   const releaseResult = simulateRelease(blueprintRealization)
   const releaseSnapshot = releaseResult.snapshot
-  const rampResult = simulateRampUntilDrop(
+  const chuteResult = simulateChuteUntilDrop(
     blueprintRealization,
     releaseSnapshot
   )
-  const dropSnapshot = rampResult.snapshot
+  const dropSnapshot = chuteResult.snapshot
   const ballisticsResult = simulateBallisticsUntilImpact(
     blueprintRealization,
     dropSnapshot
@@ -868,7 +888,7 @@ export function runSimulationStep(
   const contactResult = simulateContactUntilBounce(
     blueprintRealization,
     releaseSnapshot,
-    rampResult.invalidReason === null &&
+    chuteResult.invalidReason === null &&
       ballisticsResult.invalidReason === null,
     impactSnapshot
   )
@@ -876,7 +896,7 @@ export function runSimulationStep(
 
   const stageResults = [
     releaseResult,
-    rampResult,
+    chuteResult,
     ballisticsResult,
     contactResult,
   ]
@@ -901,9 +921,9 @@ export function runSimulationStep(
       contactMovingIntoDrumOk: null,
       targetNormalImpactSpeedDeviation_mps: null,
       targetReleaseToImpactTimeDeviation_s: null,
-      rampReliableAccelerationOk: null,
-      rampRequiredStaticFrictionCoefficient_ratio: null,
-      rampStaticFrictionOk: null,
+      chuteReliableAccelerationOk: null,
+      chuteRequiredStaticFrictionCoefficient_ratio: null,
+      chuteStaticFrictionOk: null,
       ...checks,
     },
     releaseSnapshot,

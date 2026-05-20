@@ -14,6 +14,7 @@ import { mToMm, radToDeg, sToMs } from "@/model/units"
 type BlueprintPanelProps = {
   blueprint: Blueprint | null
   expandOtherValues?: boolean
+  solveError?: string | null
 }
 
 type BlueprintItem = {
@@ -32,11 +33,11 @@ const MAIN_BLUEPRINT_KEYS = new Set<keyof Blueprint>([
   "marbleDiameter_m",
   "marbleMass_g",
   "chuteEntryAngle_rad",
+  "chuteEntryLength_m",
   "chuteBendEnabled",
   "chuteBendRadius_m",
-  "chuteEntryLength_ratio",
   "chuteExitAngle_rad",
-  "rampLength_m",
+  "chuteExitLength_m",
   "releasePoint_x_m",
   "releasePoint_y_m",
   "impactPoint_x_m",
@@ -148,6 +149,13 @@ function blueprintEntries(blueprint: Blueprint): BlueprintItem[] {
       radToDeg,
       1
     ),
+    formatScalarItem(
+      "Entry length",
+      blueprint.chuteEntryLength_m,
+      "mm",
+      mToMm,
+      0
+    ),
     ...(blueprint.chuteBendEnabled
       ? [
           formatScalarItem(
@@ -158,20 +166,21 @@ function blueprintEntries(blueprint: Blueprint): BlueprintItem[] {
             0
           ),
           formatScalarItem(
-            "Bend position",
-            blueprint.chuteEntryLength_ratio,
-            ""
-          ),
-          formatScalarItem(
             "Exit angle",
             blueprint.chuteExitAngle_rad,
             "deg",
             radToDeg,
             1
           ),
+          formatScalarItem(
+            "Exit length",
+            blueprint.chuteExitLength_m,
+            "mm",
+            mToMm,
+            0
+          ),
         ]
       : []),
-    formatScalarItem("Ramp length", blueprint.rampLength_m, "mm", mToMm, 0),
     formatPointItem(
       "Release point",
       blueprint.releasePoint_x_m,
@@ -204,22 +213,31 @@ function remainingBlueprintEntries(blueprint: Blueprint): BlueprintItem[] {
           mToMm,
           0
         ),
-        chuteEntryLength_ratio: formatScalarItem(
-          "Bend position",
-          blueprint.chuteEntryLength_ratio,
-          ""
-        ),
         chuteExitAngle_rad: formatScalarItem(
           "Exit angle",
           blueprint.chuteExitAngle_rad,
           "deg",
           radToDeg
         ),
+        chuteExitLength_m: formatScalarItem(
+          "Exit length",
+          blueprint.chuteExitLength_m,
+          "mm",
+          mToMm,
+          0
+        ),
       }
     : {}
 
   const labels: Partial<Record<keyof Blueprint, BlueprintItem>> = {
     ...bendLabels,
+    chuteEntryLength_m: formatScalarItem(
+      "Entry length",
+      blueprint.chuteEntryLength_m,
+      "mm",
+      mToMm,
+      0
+    ),
     chuteEntryAngle_rad: formatScalarItem(
       "Entry angle",
       blueprint.chuteEntryAngle_rad,
@@ -296,22 +314,15 @@ function remainingBlueprintEntries(blueprint: Blueprint): BlueprintItem[] {
       undefined,
       1
     ),
-    minimumReliableRampAcceleration_mps2: formatScalarItem(
-      "Minimum reliable ramp acceleration",
-      blueprint.minimumReliableRampAcceleration_mps2,
+    minimumReliableChuteAcceleration_mps2: formatScalarItem(
+      "Minimum reliable chute acceleration",
+      blueprint.minimumReliableChuteAcceleration_mps2,
       "m/s^2"
     ),
-    rampEnergyEfficiency_ratio: formatScalarItem(
-      "Ramp efficiency",
-      blueprint.rampEnergyEfficiency_ratio,
+    chuteEnergyEfficiency_ratio: formatScalarItem(
+      "Chute efficiency",
+      blueprint.chuteEnergyEfficiency_ratio,
       ""
-    ),
-    rampLength_m: formatScalarItem(
-      "Ramp length",
-      blueprint.rampLength_m,
-      "mm",
-      mToMm,
-      0
     ),
     releasePoint_x_m: formatScalarItem(
       "Release X",
@@ -414,8 +425,13 @@ function BlueprintRows({ items }: { items: BlueprintItem[] }) {
 export function BlueprintPanel({
   blueprint,
   expandOtherValues = false,
+  solveError = null,
 }: BlueprintPanelProps) {
   if (blueprint === null) {
+    if (solveError !== null) {
+      return <p className="text-muted-foreground">{solveError}</p>
+    }
+
     return <p className="text-muted-foreground">Blueprint pending</p>
   }
 
