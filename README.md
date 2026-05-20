@@ -96,14 +96,6 @@ npm run format
 
 The app stores the full model state in the URL hash once any input differs from defaults. This makes links reproduce the exact setup even if defaults change later.
 
-Developer-facing feature flags also live in the same hash. The bend/straight chute mode tabs are shown with:
-
-```text
-#model:bendTabs=true
-```
-
-When the flag is absent, the app still honors `chuteBendEnabled` from the URL/model state; it just hides the mode-switching tabs in the design panel.
-
 ## License
 
 MIT. See `LICENSE`.

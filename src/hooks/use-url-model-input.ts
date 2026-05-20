@@ -5,18 +5,6 @@ import type { ModelInput } from "@/model/model"
 
 const MODEL_HASH_PREFIX = "model:"
 
-export type UrlFeatureFlags = {
-  chuteModeTabs: boolean
-}
-
-const DEFAULT_URL_FEATURE_FLAGS: UrlFeatureFlags = {
-  chuteModeTabs: false,
-}
-
-const URL_FEATURE_FLAG_ALIASES = {
-  chuteModeTabs: "bendTabs",
-} satisfies Record<keyof UrlFeatureFlags, string>
-
 const MODEL_INPUT_HASH_ALIASES = {
   marbleDiameter_m: "md",
   marbleMass_g: "mm",
@@ -103,37 +91,12 @@ function parseModelInputHash(hash: string): ModelInput {
   }, defaultModelInput)
 }
 
-function parseBooleanHashValue(rawValue: string | null) {
-  return rawValue === "true" || rawValue === "1"
-}
-
-function parseUrlFeatureFlags(hash: string): UrlFeatureFlags {
-  const hashParams = parseModelInputHashParams(hash)
-
-  if (hashParams === null) {
-    return DEFAULT_URL_FEATURE_FLAGS
-  }
-
-  return {
-    chuteModeTabs: parseBooleanHashValue(
-      hashParams.get(URL_FEATURE_FLAG_ALIASES.chuteModeTabs)
-    ),
-  }
-}
-
-function formatModelInputHash(
-  modelInput: ModelInput,
-  featureFlags: UrlFeatureFlags
-) {
+function formatModelInputHash(modelInput: ModelInput) {
   const hashParams = new URLSearchParams()
 
   modelInputKeys().forEach((key) => {
     hashParams.set(MODEL_INPUT_HASH_ALIASES[key], String(modelInput[key]))
   })
-
-  if (featureFlags.chuteModeTabs) {
-    hashParams.set(URL_FEATURE_FLAG_ALIASES.chuteModeTabs, "true")
-  }
 
   return `#${MODEL_HASH_PREFIX}${hashParams.toString()}`
 }
@@ -144,10 +107,6 @@ function isDefaultModelInput(modelInput: ModelInput) {
   )
 }
 
-function isDefaultUrlFeatureFlags(featureFlags: UrlFeatureFlags) {
-  return featureFlags.chuteModeTabs === DEFAULT_URL_FEATURE_FLAGS.chuteModeTabs
-}
-
 function clearHash() {
   window.history.replaceState(
     null,
@@ -156,14 +115,8 @@ function clearHash() {
   )
 }
 
-function syncModelInputHash(
-  modelInput: ModelInput,
-  featureFlags: UrlFeatureFlags
-) {
-  if (
-    isDefaultModelInput(modelInput) &&
-    isDefaultUrlFeatureFlags(featureFlags)
-  ) {
+function syncModelInputHash(modelInput: ModelInput) {
+  if (isDefaultModelInput(modelInput)) {
     if (window.location.hash) {
       clearHash()
     }
@@ -171,7 +124,7 @@ function syncModelInputHash(
     return
   }
 
-  const nextHash = formatModelInputHash(modelInput, featureFlags)
+  const nextHash = formatModelInputHash(modelInput)
 
   if (window.location.hash !== nextHash) {
     window.history.replaceState(null, "", nextHash)
@@ -182,18 +135,14 @@ export function useUrlModelInput() {
   const [modelInput, setModelInput] = useState<ModelInput>(() =>
     parseModelInputHash(window.location.hash)
   )
-  const [featureFlags, setFeatureFlags] = useState<UrlFeatureFlags>(() =>
-    parseUrlFeatureFlags(window.location.hash)
-  )
 
   useEffect(() => {
-    syncModelInputHash(modelInput, featureFlags)
-  }, [featureFlags, modelInput])
+    syncModelInputHash(modelInput)
+  }, [modelInput])
 
   useEffect(() => {
     function updateModelInputFromHash() {
       setModelInput(parseModelInputHash(window.location.hash))
-      setFeatureFlags(parseUrlFeatureFlags(window.location.hash))
     }
 
     window.addEventListener("hashchange", updateModelInputFromHash)
@@ -203,5 +152,5 @@ export function useUrlModelInput() {
     }
   }, [])
 
-  return [modelInput, setModelInput, featureFlags] as const
+  return [modelInput, setModelInput] as const
 }

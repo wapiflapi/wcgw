@@ -45,7 +45,6 @@ import {
 type DesignPanelProps = {
   modelInput: ModelInput
   onModelInputChange: (modelInput: ModelInput) => void
-  showChuteModeTabs: boolean
   solveError: string | null
 }
 
@@ -149,7 +148,6 @@ function clamp(value: number, min: number, max: number) {
 export function DesignPanel({
   modelInput,
   onModelInputChange,
-  showChuteModeTabs,
   solveError,
 }: DesignPanelProps) {
   function updateInput<Key extends keyof ModelInput>(
@@ -446,12 +444,10 @@ export function DesignPanel({
             >
               <div className="flex items-center justify-between gap-4">
                 <div className="text-sm font-medium">Chute</div>
-                {showChuteModeTabs ? (
-                  <TabsList>
-                    <TabsTrigger value="straight">Straight</TabsTrigger>
-                    <TabsTrigger value="bend">Bend</TabsTrigger>
-                  </TabsList>
-                ) : null}
+                <TabsList>
+                  <TabsTrigger value="straight">Straight</TabsTrigger>
+                  <TabsTrigger value="bend">Bend</TabsTrigger>
+                </TabsList>
               </div>
               {solveError ? <SolveErrorAlert message={solveError} /> : null}
               <TabsContent value="straight">
