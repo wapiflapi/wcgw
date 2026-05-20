@@ -10,11 +10,6 @@ export const defaultModelInput: ModelInput = {
   targetNormalImpactSpeed_mps: 2.426,
 
   rampAngle_rad: degToModelRad(-40),
-  rampLength_m: 1,
-  releasePoint_x_m: 0,
-  releasePoint_y_m: 0,
-  impactPoint_x_m: 0,
-  impactPoint_y_m: 0,
   drumTiltAngle_rad: degToModelRad(-10),
   drumPivotArmLength_m: 0.5,
   drumPivotAngleRange_rad: degToModelRad(5),

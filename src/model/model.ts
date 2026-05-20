@@ -13,11 +13,6 @@ export type ModelInput = {
   targetNormalImpactSpeed_mps: number
 
   rampAngle_rad: number
-  rampLength_m: number
-  releasePoint_x_m: number
-  releasePoint_y_m: number
-  impactPoint_x_m: number
-  impactPoint_y_m: number
   drumTiltAngle_rad: number
   drumPivotArmLength_m: number
   drumPivotAngleRange_rad: number
