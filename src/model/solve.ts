@@ -66,7 +66,7 @@ function solveRampLaunchGeometry(
   drumGeometry: DrumGeometry
 ): RampLaunchGeometry {
   // Ramp angle, measured from horizontal, positive counterclockwise.
-  const rampAngle_rad = input.rampAngle_rad
+  const rampAngle_rad = input.chuteEntryAngle_rad
 
   // Ramp energy efficiency, where 1 means no rolling loss.
   const rampEnergyEfficiency_ratio = input.rampEnergyEfficiency_ratio
@@ -200,8 +200,18 @@ export function solveBlueprint(input: ModelInput): Blueprint {
       input.targetNormalImpactSpeed_mps
     ),
 
-    rampAngle_rad: blueprintSolvedValue(
-      input.rampAngle_rad,
+    chuteEntryAngle_rad: blueprintSolvedValue(
+      input.chuteEntryAngle_rad,
+      manufacturingAngleTolerance_rad
+    ),
+    chuteBendEnabled: false,
+    chuteBendRadius_m: blueprintSolvedValue(
+      input.chuteBendRadius_m,
+      manufacturingLinearTolerance_m
+    ),
+    chuteEntryLength_ratio: blueprintValue(input.chuteEntryLength_ratio),
+    chuteExitAngle_rad: blueprintSolvedValue(
+      input.chuteExitAngle_rad,
       manufacturingAngleTolerance_rad
     ),
     rampLength_m: blueprintSolvedValue(

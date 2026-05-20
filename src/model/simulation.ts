@@ -67,7 +67,7 @@ function simulateRampUntilDrop(
   releaseSnapshot: Snapshot
 ): SimulationStageResult {
   // Ramp angle, measured from horizontal, positive counterclockwise.
-  const rampAngle_rad = blueprintRealization.rampAngle_rad
+  const rampAngle_rad = blueprintRealization.chuteEntryAngle_rad
 
   // Distance from the release point to the drop point along the ramp.
   const rampLength_m = blueprintRealization.rampLength_m
@@ -120,8 +120,7 @@ function simulateRampUntilDrop(
   // Static friction required for rolling without slipping.
   const rampRequiredStaticFrictionCoefficient_ratio =
     rampNormalAcceleration_mps2 > 0
-      ? Math.abs(rollingFrictionAcceleration_mps2) /
-        rampNormalAcceleration_mps2
+      ? Math.abs(rollingFrictionAcceleration_mps2) / rampNormalAcceleration_mps2
       : Number.POSITIVE_INFINITY
 
   // Whether the provided friction coefficient is enough for no-slip rolling.
@@ -150,8 +149,7 @@ function simulateRampUntilDrop(
   // If we cannot rely on static rolling, the ramp initially uses sliding.
   const startingSlipSign = gravityAlongRamp_mps2 >= 0 ? 1 : -1
   const startingSlidingAcceleration_mps2 =
-    gravityAlongRamp_mps2 -
-    startingSlipSign * kineticFrictionAcceleration_mps2
+    gravityAlongRamp_mps2 - startingSlipSign * kineticFrictionAcceleration_mps2
 
   // Very small acceleration may not overcome real-world imperfections.
   const rampReliableAccelerationOk =
@@ -191,13 +189,13 @@ function simulateRampUntilDrop(
     return {
       snapshot: releaseSnapshot,
       checks,
-      invalidReason: "Ramp acceleration is below the reliable motion threshold.",
+      invalidReason:
+        "Ramp acceleration is below the reliable motion threshold.",
     }
   }
 
   // Rolling acceleration factor beta maps to I = c m r^2.
-  const marbleInertiaCoefficient_ratio =
-    1 / rollingInertiaFactor_ratio - 1
+  const marbleInertiaCoefficient_ratio = 1 / rollingInertiaFactor_ratio - 1
 
   // Without inertia, friction cannot convert sliding into spin.
   if (
@@ -275,8 +273,7 @@ function simulateRampUntilDrop(
     }
 
     // Kinematic equation: v1 = v0 + a t.
-    const endSpeed_mps =
-      startSpeed_mps + rampAcceleration_mps2 * segmentTime_s
+    const endSpeed_mps = startSpeed_mps + rampAcceleration_mps2 * segmentTime_s
 
     // No-slip rolling keeps v = omega r.
     const endSpin_radps =
@@ -298,8 +295,7 @@ function simulateRampUntilDrop(
   ): RampSegmentResult | null {
     // Kinetic friction pushes against the slipping contact patch.
     const segmentAcceleration_mps2 =
-      gravityAlongRamp_mps2 -
-      slipSign * kineticFrictionAcceleration_mps2
+      gravityAlongRamp_mps2 - slipSign * kineticFrictionAcceleration_mps2
 
     // The same friction creates torque and changes spin.
     const segmentSpinAcceleration_radps2 =
@@ -379,8 +375,7 @@ function simulateRampUntilDrop(
 
     // Sliding linear acceleration while that slip direction remains true.
     const slidingAcceleration_mps2 =
-      gravityAlongRamp_mps2 -
-      firstSlipSign * kineticFrictionAcceleration_mps2
+      gravityAlongRamp_mps2 - firstSlipSign * kineticFrictionAcceleration_mps2
 
     // Sliding angular acceleration while that slip direction remains true.
     const slidingSpinAcceleration_radps2 =
@@ -389,8 +384,7 @@ function simulateRampUntilDrop(
 
     // Slip changes as linear speed and surface spin speed diverge or converge.
     const slipAcceleration_mps2 =
-      slidingAcceleration_mps2 -
-      slidingSpinAcceleration_radps2 * marbleRadius_m
+      slidingAcceleration_mps2 - slidingSpinAcceleration_radps2 * marbleRadius_m
 
     // Time until v = omega r, if friction is closing the slip gap.
     const timeUntilNoSlip_s =
@@ -537,8 +531,7 @@ function simulateBallisticsUntilImpact(
   const unpivotedImpactPoint_y_m = blueprintRealization.impactPoint_y_m
 
   // The pivot sits one arm length to the negative X side of the impact point.
-  const drumPivotPoint_x_m =
-    unpivotedImpactPoint_x_m - drumPivotArmLength_m
+  const drumPivotPoint_x_m = unpivotedImpactPoint_x_m - drumPivotArmLength_m
 
   // The pivot sits horizontally level with the unpivoted impact point.
   const drumPivotPoint_y_m = unpivotedImpactPoint_y_m
@@ -560,12 +553,10 @@ function simulateBallisticsUntilImpact(
     unpivotedImpactOffsetFromPivot_y_m * Math.cos(drumPivotAngle_rad)
 
   // Impact point for the marble center after pivoting.
-  const impactPoint_x_m =
-    drumPivotPoint_x_m + pivotedImpactOffsetFromPivot_x_m
+  const impactPoint_x_m = drumPivotPoint_x_m + pivotedImpactOffsetFromPivot_x_m
 
   // Impact point for the marble center after pivoting.
-  const impactPoint_y_m =
-    drumPivotPoint_y_m + pivotedImpactOffsetFromPivot_y_m
+  const impactPoint_y_m = drumPivotPoint_y_m + pivotedImpactOffsetFromPivot_y_m
 
   // Final drum surface angle after the pivot rotates the whole assembly.
   const drumSurfaceAngle_rad =
@@ -646,9 +637,7 @@ function simulateBallisticsUntilImpact(
       (-impactTimeQuadratic_b + impactTimeDiscriminantRoot) / denominator
     )
   } else if (Math.abs(impactTimeQuadratic_b) > Number.EPSILON) {
-    impactTimeCandidates_s.push(
-      -impactTimeQuadratic_c / impactTimeQuadratic_b
-    )
+    impactTimeCandidates_s.push(-impactTimeQuadratic_c / impactTimeQuadratic_b)
   }
 
   // Only future or immediate intersections are physical.
@@ -780,8 +769,7 @@ function simulateContactUntilBounce(
 
   // The impact speed target is measured into the drum normal.
   const targetNormalImpactSpeedDeviation_mps = canVerifyTargets
-    ? -impactNormalSpeed_mps -
-      blueprintRealization.targetNormalImpactSpeed_mps
+    ? -impactNormalSpeed_mps - blueprintRealization.targetNormalImpactSpeed_mps
     : null
 
   const checks = {
@@ -833,8 +821,7 @@ function simulateContactUntilBounce(
 
   // Spin changes in the opposite direction of the transferred surface speed.
   const bounceSpin_radps =
-    impactSnapshot.marbleSpin_radps -
-    spinTransferSpeed_mps / marbleRadius_m
+    impactSnapshot.marbleSpin_radps - spinTransferSpeed_mps / marbleRadius_m
 
   // Horizontal bounce speed rebuilt from tangent and normal components.
   const bounceSpeed_x_mps =

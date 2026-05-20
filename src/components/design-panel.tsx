@@ -21,6 +21,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import { formatNumber } from "@/lib/format"
+import { defaultModelInput } from "@/model/defaults"
 import {
   getFreeFallDurationFromHeight_s,
   getFreeFallHeightFromDuration_m,
@@ -29,7 +30,14 @@ import {
 } from "@/model/free-fall"
 import { getSphereMass_g, isMassWithinRelativeTolerance } from "@/model/marble"
 import type { ModelInput } from "@/model/model"
-import { degToModelRad, mToMm, mmToM, msToS, radToDeg, sToMs } from "@/model/units"
+import {
+  degToModelRad,
+  mToMm,
+  mmToM,
+  msToS,
+  radToDeg,
+  sToMs,
+} from "@/model/units"
 
 type DesignPanelProps = {
   modelInput: ModelInput
@@ -116,26 +124,28 @@ export function DesignPanel({
   modelInput,
   onModelInputChange,
 }: DesignPanelProps) {
-  function updateInput(key: keyof ModelInput, value: number) {
+  function updateInput<Key extends keyof ModelInput>(
+    key: Key,
+    value: ModelInput[Key]
+  ) {
     onModelInputChange({
       ...modelInput,
       [key]: value,
     })
   }
 
-  function updateInputs(updates: Partial<Record<keyof ModelInput, number>>) {
-    onModelInputChange(
-      Object.entries(updates).reduce<ModelInput>(
-        (nextModelInput, [key, value]) => ({
-          ...nextModelInput,
-          [key]: value,
-        }),
-        modelInput
-      )
-    )
+  function updateInputs(updates: Partial<ModelInput>) {
+    onModelInputChange({
+      ...modelInput,
+      ...updates,
+    })
   }
 
   const gravity_mps2 = modelInput.gravity_mps2
+  const minimumChuteBendRadius_m = modelInput.marbleDiameter_m * 5
+  const minimumChuteBendRadius_mm = mToMm(minimumChuteBendRadius_m)
+  const maximumChuteBendRadius_mm = 1000
+  const chuteBendRadiusStep_mm = 1
   const expectedMarbleMass_g = getSphereMass_g(
     modelInput.marbleDiameter_m,
     modelInput.marbleDensity_kgpm3
@@ -327,7 +337,7 @@ export function DesignPanel({
                 id="targetNormalImpactSpeed_mps"
                 label={
                   <InfoLabel why="The speed into the drum surface normal. The solver uses this as the punch target and observations check the simulated impact against it.">
-                    Normal impact speed
+                    Impact speed
                   </InfoLabel>
                 }
                 unit="m/s"
@@ -340,24 +350,131 @@ export function DesignPanel({
           </FieldSet>
 
           <FieldSet>
-            <FieldLegend>Ramp</FieldLegend>
-            <SliderField
-              id="rampAngle_deg"
-              label={
-                <InfoLabel why="Sets the ramp direction and how much gravity accelerates the marble along the ramp before launch.">
-                  Ramp angle
-                </InfoLabel>
-              }
-              unit="deg"
-              value={radToDeg(modelInput.rampAngle_rad)}
-              min={-90}
-              max={0}
-              step={1}
-              inverted
-              onChange={(angle_deg) => {
-                updateInput("rampAngle_rad", degToModelRad(angle_deg))
+            <Tabs
+              className="gap-4"
+              value={modelInput.chuteBendEnabled ? "bend" : "straight"}
+              onValueChange={(value) => {
+                const bendEnabled = value === "bend"
+
+                updateInputs({
+                  chuteBendEnabled: bendEnabled,
+                  ...(bendEnabled
+                    ? {
+                        chuteBendRadius_m: Math.max(
+                          defaultModelInput.chuteBendRadius_m,
+                          minimumChuteBendRadius_m
+                        ),
+                      }
+                    : {}),
+                })
               }}
-            />
+            >
+              <div className="flex items-center justify-between gap-4">
+                <div className="text-sm font-medium">Chute</div>
+                <TabsList>
+                  <TabsTrigger value="straight">Straight</TabsTrigger>
+                  <TabsTrigger value="bend">Bend</TabsTrigger>
+                </TabsList>
+              </div>
+              <TabsContent value="straight">
+                <SliderField
+                  id="straightChuteEntryAngle_deg"
+                  label={
+                    <InfoLabel why="Sets the initial chute direction and how much gravity accelerates the marble before launch.">
+                      Entry angle
+                    </InfoLabel>
+                  }
+                  unit="deg"
+                  value={radToDeg(modelInput.chuteEntryAngle_rad)}
+                  min={-90}
+                  max={0}
+                  step={1}
+                  inverted
+                  onChange={(angle_deg) => {
+                    updateInput("chuteEntryAngle_rad", degToModelRad(angle_deg))
+                  }}
+                />
+              </TabsContent>
+              <TabsContent value="bend">
+                <FieldGroup>
+                  <SliderField
+                    id="bendChuteEntryAngle_deg"
+                    label={
+                      <InfoLabel why="Sets the initial chute direction and how much gravity accelerates the marble before launch.">
+                        Entry angle
+                      </InfoLabel>
+                    }
+                    unit="deg"
+                    value={radToDeg(modelInput.chuteEntryAngle_rad)}
+                    min={-90}
+                    max={0}
+                    step={1}
+                    inverted
+                    onChange={(angle_deg) => {
+                      updateInput(
+                        "chuteEntryAngle_rad",
+                        degToModelRad(angle_deg)
+                      )
+                    }}
+                  />
+                  <SliderField
+                    id="chuteBendRadius_mm"
+                    label={
+                      <InfoLabel why="Radius of the curve connecting the entry and exit chute segments.">
+                        Bend size
+                      </InfoLabel>
+                    }
+                    unit="mm"
+                    value={Math.max(
+                      mToMm(modelInput.chuteBendRadius_m),
+                      minimumChuteBendRadius_mm
+                    )}
+                    min={minimumChuteBendRadius_mm}
+                    max={maximumChuteBendRadius_mm}
+                    step={chuteBendRadiusStep_mm}
+                    onChange={(radius_mm) => {
+                      updateInput("chuteBendRadius_m", mmToM(radius_mm))
+                    }}
+                  />
+                  <SliderField
+                    id="chuteEntryLength_ratio"
+                    label={
+                      <InfoLabel why="Moves the bend earlier or later along the chute by changing how much straight chute comes before it versus after it.">
+                        Bend position
+                      </InfoLabel>
+                    }
+                    unit=""
+                    value={modelInput.chuteEntryLength_ratio}
+                    min={0.1}
+                    max={0.9}
+                    step={0.01}
+                    onChange={(ratio) => {
+                      updateInput("chuteEntryLength_ratio", ratio)
+                    }}
+                  />
+                  <SliderField
+                    id="chuteExitAngle_deg"
+                    label={
+                      <InfoLabel why="Sets the chute direction after the bend. The current solver scaffolding still uses the entry angle only.">
+                        Exit angle
+                      </InfoLabel>
+                    }
+                    unit="deg"
+                    value={radToDeg(modelInput.chuteExitAngle_rad)}
+                    min={-90}
+                    max={0}
+                    step={1}
+                    inverted
+                    onChange={(angle_deg) => {
+                      updateInput(
+                        "chuteExitAngle_rad",
+                        degToModelRad(angle_deg)
+                      )
+                    }}
+                  />
+                </FieldGroup>
+              </TabsContent>
+            </Tabs>
           </FieldSet>
 
           <FieldSet>

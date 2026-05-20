@@ -11,7 +11,11 @@ const MODEL_INPUT_HASH_ALIASES = {
   targetReleaseToImpactTime_s: "rt",
   targetReleaseToImpactTimeTolerance_s: "rtt",
   targetNormalImpactSpeed_mps: "is",
-  rampAngle_rad: "ra",
+  chuteEntryAngle_rad: "cea",
+  chuteBendEnabled: "cbe",
+  chuteBendRadius_m: "cbr",
+  chuteEntryLength_ratio: "clr",
+  chuteExitAngle_rad: "cxa",
   drumTiltAngle_rad: "dt",
   drumPivotArmLength_m: "dpa",
   drumPivotAngleRange_rad: "dpr",
@@ -61,6 +65,13 @@ function parseModelInputHash(hash: string): ModelInput {
 
     if (rawValue === null || rawValue.trim() === "") {
       return nextModelInput
+    }
+
+    if (typeof defaultModelInput[key] === "boolean") {
+      return {
+        ...nextModelInput,
+        [key]: rawValue === "true" || rawValue === "1",
+      }
     }
 
     const parsedValue = Number(rawValue)

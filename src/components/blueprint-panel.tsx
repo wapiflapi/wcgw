@@ -31,7 +31,11 @@ type BlueprintValueLine = {
 const MAIN_BLUEPRINT_KEYS = new Set<keyof Blueprint>([
   "marbleDiameter_m",
   "marbleMass_g",
-  "rampAngle_rad",
+  "chuteEntryAngle_rad",
+  "chuteBendEnabled",
+  "chuteBendRadius_m",
+  "chuteEntryLength_ratio",
+  "chuteExitAngle_rad",
   "rampLength_m",
   "releasePoint_x_m",
   "releasePoint_y_m",
@@ -63,12 +67,10 @@ function formatBlueprintTolerance(
     return undefined
   }
   const minus = Math.abs(
-    transform(value.nominal) -
-      transform(value.nominal - value.toleranceMinus)
+    transform(value.nominal) - transform(value.nominal - value.toleranceMinus)
   )
   const plus = Math.abs(
-    transform(value.nominal + value.tolerancePlus) -
-      transform(value.nominal)
+    transform(value.nominal + value.tolerancePlus) - transform(value.nominal)
   )
   const formattedMinus = formatNumber(minus, digits)
   const formattedPlus = formatNumber(plus, digits)
@@ -130,7 +132,7 @@ function formatPointItem(
 }
 
 function blueprintEntries(blueprint: Blueprint): BlueprintItem[] {
-  return [
+  const items = [
     formatScalarItem(
       "Marble diameter",
       blueprint.marbleDiameter_m,
@@ -139,7 +141,36 @@ function blueprintEntries(blueprint: Blueprint): BlueprintItem[] {
       0
     ),
     formatScalarItem("Marble mass", blueprint.marbleMass_g, "g", undefined, 1),
-    formatScalarItem("Ramp angle", blueprint.rampAngle_rad, "deg", radToDeg, 1),
+    formatScalarItem(
+      "Entry angle",
+      blueprint.chuteEntryAngle_rad,
+      "deg",
+      radToDeg,
+      1
+    ),
+    ...(blueprint.chuteBendEnabled
+      ? [
+          formatScalarItem(
+            "Bend size",
+            blueprint.chuteBendRadius_m,
+            "mm",
+            mToMm,
+            0
+          ),
+          formatScalarItem(
+            "Bend position",
+            blueprint.chuteEntryLength_ratio,
+            ""
+          ),
+          formatScalarItem(
+            "Exit angle",
+            blueprint.chuteExitAngle_rad,
+            "deg",
+            radToDeg,
+            1
+          ),
+        ]
+      : []),
     formatScalarItem("Ramp length", blueprint.rampLength_m, "mm", mToMm, 0),
     formatPointItem(
       "Release point",
@@ -159,10 +190,42 @@ function blueprintEntries(blueprint: Blueprint): BlueprintItem[] {
       1
     ),
   ]
+
+  return items
 }
 
 function remainingBlueprintEntries(blueprint: Blueprint): BlueprintItem[] {
-  const labels: Record<keyof Blueprint, BlueprintItem> = {
+  const bendLabels = blueprint.chuteBendEnabled
+    ? {
+        chuteBendRadius_m: formatScalarItem(
+          "Bend size",
+          blueprint.chuteBendRadius_m,
+          "mm",
+          mToMm,
+          0
+        ),
+        chuteEntryLength_ratio: formatScalarItem(
+          "Bend position",
+          blueprint.chuteEntryLength_ratio,
+          ""
+        ),
+        chuteExitAngle_rad: formatScalarItem(
+          "Exit angle",
+          blueprint.chuteExitAngle_rad,
+          "deg",
+          radToDeg
+        ),
+      }
+    : {}
+
+  const labels: Partial<Record<keyof Blueprint, BlueprintItem>> = {
+    ...bendLabels,
+    chuteEntryAngle_rad: formatScalarItem(
+      "Entry angle",
+      blueprint.chuteEntryAngle_rad,
+      "deg",
+      radToDeg
+    ),
     drumPivotArmLength_m: formatScalarItem(
       "Drum pivot arm length",
       blueprint.drumPivotArmLength_m,
@@ -238,12 +301,6 @@ function remainingBlueprintEntries(blueprint: Blueprint): BlueprintItem[] {
       blueprint.minimumReliableRampAcceleration_mps2,
       "m/s^2"
     ),
-    rampAngle_rad: formatScalarItem(
-      "Ramp angle",
-      blueprint.rampAngle_rad,
-      "deg",
-      radToDeg
-    ),
     rampEnergyEfficiency_ratio: formatScalarItem(
       "Ramp efficiency",
       blueprint.rampEnergyEfficiency_ratio,
@@ -299,9 +356,10 @@ function remainingBlueprintEntries(blueprint: Blueprint): BlueprintItem[] {
     ),
   }
 
-  return (Object.keys(labels) as Array<keyof Blueprint>)
+  return (Object.keys(labels) as Array<keyof typeof labels>)
     .filter((key) => !MAIN_BLUEPRINT_KEYS.has(key))
     .map((key) => labels[key])
+    .filter((item) => item !== undefined)
 }
 
 function BlueprintRows({ items }: { items: BlueprintItem[] }) {

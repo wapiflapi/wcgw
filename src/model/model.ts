@@ -12,7 +12,11 @@ export type ModelInput = {
   targetReleaseToImpactTimeTolerance_s: number
   targetNormalImpactSpeed_mps: number
 
-  rampAngle_rad: number
+  chuteEntryAngle_rad: number
+  chuteBendEnabled: boolean
+  chuteBendRadius_m: number
+  chuteEntryLength_ratio: number
+  chuteExitAngle_rad: number
   drumTiltAngle_rad: number
   drumPivotArmLength_m: number
   drumPivotAngleRange_rad: number
@@ -47,7 +51,11 @@ export type Blueprint = {
   targetReleaseToImpactTime_s: BlueprintValue
   targetNormalImpactSpeed_mps: BlueprintValue
 
-  rampAngle_rad: BlueprintValue
+  chuteEntryAngle_rad: BlueprintValue
+  chuteBendEnabled: boolean
+  chuteBendRadius_m: BlueprintValue
+  chuteEntryLength_ratio: BlueprintValue
+  chuteExitAngle_rad: BlueprintValue
   rampLength_m: BlueprintValue
   releasePoint_x_m: BlueprintValue
   releasePoint_y_m: BlueprintValue
@@ -70,7 +78,9 @@ export type Blueprint = {
 }
 
 export type BlueprintRealization = {
-  [Key in keyof Blueprint]: number
+  [Key in keyof Blueprint]: Blueprint[Key] extends BlueprintValue
+    ? number
+    : Blueprint[Key]
 }
 
 export type Snapshot = {

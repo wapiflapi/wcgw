@@ -152,11 +152,11 @@ function getSchematicGeometry(blueprint: Blueprint): SchematicGeometry {
     x_m:
       releasePoint.x_m +
       blueprint.rampLength_m.nominal *
-        Math.cos(blueprint.rampAngle_rad.nominal),
+        Math.cos(blueprint.chuteEntryAngle_rad.nominal),
     y_m:
       releasePoint.y_m +
       blueprint.rampLength_m.nominal *
-        Math.sin(blueprint.rampAngle_rad.nominal),
+        Math.sin(blueprint.chuteEntryAngle_rad.nominal),
   }
   const drumTiltAngle_rad = blueprint.drumTiltAngle_rad.nominal
   const drumSurfaceNormal = {
@@ -418,25 +418,21 @@ function createMarblePathCurve(
   board: JXG.Board,
   style: MarblePathStyle
 ): MarblePathCurve {
-  return board.create(
-    "curve",
-    [[], []],
-    {
-      doAdvancedPlot: false,
-      fixed: true,
-      highlight: false,
-      highlightStrokeColor: style.strokeColor,
-      highlightStrokeOpacity: style.strokeOpacity,
-      highlightStrokeWidth: style.strokeWidth,
-      numberPointsHigh: TRAJECTORY_POINT_COUNT,
-      numberPointsLow: TRAJECTORY_POINT_COUNT,
-      strokeColor: style.strokeColor,
-      strokeOpacity: style.strokeOpacity,
-      strokeWidth: style.strokeWidth,
-      useQdt: false,
-      visible: false,
-    }
-  ) as MarblePathCurve
+  return board.create("curve", [[], []], {
+    doAdvancedPlot: false,
+    fixed: true,
+    highlight: false,
+    highlightStrokeColor: style.strokeColor,
+    highlightStrokeOpacity: style.strokeOpacity,
+    highlightStrokeWidth: style.strokeWidth,
+    numberPointsHigh: TRAJECTORY_POINT_COUNT,
+    numberPointsLow: TRAJECTORY_POINT_COUNT,
+    strokeColor: style.strokeColor,
+    strokeOpacity: style.strokeOpacity,
+    strokeWidth: style.strokeWidth,
+    useQdt: false,
+    visible: false,
+  }) as MarblePathCurve
 }
 
 function createMarblePathElements(
@@ -478,11 +474,9 @@ function hideMarblePathElements(elements: MarblePathElements) {
 }
 
 function styleKey(style: MarblePathStyle) {
-  return [
-    style.strokeColor,
-    style.strokeOpacity ?? "",
-    style.strokeWidth,
-  ].join(":")
+  return [style.strokeColor, style.strokeOpacity ?? "", style.strokeWidth].join(
+    ":"
+  )
 }
 
 function boundsKey(bounds: [number, number, number, number]) {
@@ -784,7 +778,8 @@ export function SchematicBoard({
     updateSchematicElements(board, elementsRef.current, geometry)
 
     const uniqueFeaturedObservations = featuredObservations.filter(
-      (observation, index) => featuredObservations.indexOf(observation) === index
+      (observation, index) =>
+        featuredObservations.indexOf(observation) === index
     )
     const featuredObservationSet = new Set(uniqueFeaturedObservations)
     const nonNominalFeaturedObservations = uniqueFeaturedObservations.filter(

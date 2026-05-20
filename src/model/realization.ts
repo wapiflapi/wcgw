@@ -4,7 +4,10 @@ export function createNominalBlueprintRealization(
   blueprint: Blueprint
 ): BlueprintRealization {
   return Object.fromEntries(
-    Object.entries(blueprint).map(([key, value]) => [key, value.nominal])
+    Object.entries(blueprint).map(([key, value]) => [
+      key,
+      typeof value === "boolean" ? value : value.nominal,
+    ])
   ) as BlueprintRealization
 }
 
@@ -14,9 +17,11 @@ export function sampleBlueprintRealization(
   return Object.fromEntries(
     Object.entries(blueprint).map(([key, value]) => [
       key,
-      value.nominal -
-        value.toleranceMinus +
-        Math.random() * (value.toleranceMinus + value.tolerancePlus),
+      typeof value === "boolean"
+        ? value
+        : value.nominal -
+          value.toleranceMinus +
+          Math.random() * (value.toleranceMinus + value.tolerancePlus),
     ])
   ) as BlueprintRealization
 }
